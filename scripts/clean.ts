@@ -88,23 +88,21 @@ export class RepositoryCleaner {
       await this.addIfPresent(targets, outputDirectory, canonicalRoot)
     }
 
-    for (const groupDirectory of await childDirectories(join(this.root, 'packages'))) {
-      for (const packageDirectory of await childDirectories(groupDirectory)) {
-        // A package.json marks a live package; its output was discovered from the
-        // project graph above, and its package-local node_modules must be preserved.
-        if (await exists(join(packageDirectory, 'package.json'))) {
-          continue
-        }
+    for (const packageDirectory of await this.workspacePackageDirectories()) {
+      // package.json 表示目录仍是有效工作区；其输出已由上面的项目图处理，
+      // 包内 node_modules 必须保留。
+      if (await exists(join(packageDirectory, 'package.json'))) {
+        continue
+      }
 
-        // A manifest-less package directory is stale only when every remaining
-        // entry is known generated residue; unknown files make the whole clean fail.
-        const entries = await readdir(packageDirectory)
-        const unknown = entries.filter(entry => !knownOrphanEntries.has(entry) && !entry.endsWith('.tsbuildinfo'))
-        if (unknown.length > 0) {
-          unsafeOrphans.push(...unknown.map(entry => repositoryPath(this.root, join(packageDirectory, entry))))
-        } else {
-          await this.addIfPresent(targets, packageDirectory, canonicalRoot)
-        }
+      // packages/*/* 和 vendor/* 都可能在上游删除包后遗留仅含 node_modules
+      // 的空壳。tsdown 会把这种目录误识别为工作区，因此必须在构建前清除。
+      const entries = await readdir(packageDirectory)
+      const unknown = entries.filter(entry => !knownOrphanEntries.has(entry) && !entry.endsWith('.tsbuildinfo'))
+      if (unknown.length > 0) {
+        unsafeOrphans.push(...unknown.map(entry => repositoryPath(this.root, join(packageDirectory, entry))))
+      } else {
+        await this.addIfPresent(targets, packageDirectory, canonicalRoot)
       }
     }
 
@@ -116,6 +114,14 @@ export class RepositoryCleaner {
     }
 
     return [...targets].sort()
+  }
+
+  private async workspacePackageDirectories(): Promise<string[]> {
+    const directories = await childDirectories(join(this.root, 'vendor'))
+    for (const groupDirectory of await childDirectories(join(this.root, 'packages'))) {
+      directories.push(...await childDirectories(groupDirectory))
+    }
+    return directories
   }
 
   private buildOutputDirectories(): string[] {
