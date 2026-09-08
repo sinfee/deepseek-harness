@@ -21,6 +21,30 @@ const SOURCE_TSCONFIG_PATH = fileURLToPath(new URL('../../../../tsconfig.base.js
 const RUNNER_CONTROL_ENV_PREFIXES = ['NODE_', 'TSX_'] as const
 
 /**
+ * Win7 zero-link releases boot every Node process through an app-local loader
+ * hook and must keep Node's Windows version gate skipped. Stripping these along
+ * with the other `NODE_` controls kills the runner child at image start
+ * (`exit code 216` = `ERROR_EXE_MACHINE_TYPE_MISMATCH`, Node's own platform
+ * check), which fails every managed spawn. `DSH_ZERO_LINKS` is set only by the
+ * Win7 portable launcher, so upstream bootstraps keep their clean environment.
+ */
+const ZERO_LINK_RUNNER_ENV = ['NODE_SKIP_PLATFORM_CHECK', 'NODE_OPTIONS', 'NODE_PATH'] as const
+
+/**
+ * Collect the loader controls a zero-link release needs inside its runner.
+ * @returns preserved bootstrap variables, empty outside a zero-link release.
+ */
+function zeroLinkRunnerEnv(): NodeJS.ProcessEnv {
+  if (process.env.DSH_ZERO_LINKS !== '1') return {}
+  const preserved: NodeJS.ProcessEnv = {}
+  for (const name of ZERO_LINK_RUNNER_ENV) {
+    const value = process.env[name]
+    if (value !== undefined) preserved[name] = value
+  }
+  return preserved
+}
+
+/**
  * Resolve the source, built, or packaged entry that calls the same runner core.
  * @returns executable and arguments for the active runtime form.
  */
@@ -77,6 +101,7 @@ export function runnerEnvironment(
   }
   return {
     ...env,
+    ...zeroLinkRunnerEnv(),
     [SUBPROCESS_RUNNER_ENV]: selection,
     SYSTEMD_LOG_TARGET: 'null',
     ...entry?.endsWith('.ts') === true ? { TSX_TSCONFIG_PATH: SOURCE_TSCONFIG_PATH } : {},
