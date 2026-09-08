@@ -16,6 +16,8 @@ export const WAIT_TIMEOUT = 258
 export const CREATE_SUSPENDED = 0x4
 /** CreateProcess flag selecting a UTF-16 environment block. */
 export const CREATE_UNICODE_ENVIRONMENT = 0x400
+/** CreateProcess flag that keeps the child out of the creator's Job. */
+export const CREATE_BREAKAWAY_FROM_JOB = 0x01000000
 /** GetStdHandle selector for standard input. */
 export const STD_INPUT_HANDLE = -10
 /** GetStdHandle selector for standard output. */
@@ -34,6 +36,8 @@ export const ERROR_BROKEN_PIPE = 109
 export const ERROR_NO_DATA = 232
 /** Job limit that terminates every member when the final Job handle closes. */
 export const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
+/** Job limit that lets a member create children with CREATE_BREAKAWAY_FROM_JOB. */
+export const JOB_OBJECT_LIMIT_BREAKAWAY_OK = 0x00000800
 /** QueryInformationJobObject class for basic accounting and active-process count. */
 export const JobObjectBasicAccountingInformation = 1
 /** SetInformationJobObject class for JOBOBJECT_EXTENDED_LIMIT_INFORMATION. */

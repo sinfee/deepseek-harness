@@ -22,6 +22,7 @@ export {
   closeHandleChecked,
   drainPipe,
   isJobEmpty,
+  nestedJobsUnsupported,
   pollProcessExit,
   probeCurrentTokenJobSupport,
   spawnInheritedJobProcess,
