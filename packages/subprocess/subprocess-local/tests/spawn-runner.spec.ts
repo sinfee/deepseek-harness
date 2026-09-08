@@ -304,6 +304,23 @@ describe('runner launch inputs', () => {
     }
   })
 
+  it('keeps the Win7 zero-link loader controls inside the runner bootstrap', () => {
+    vi.stubEnv('DSH_ZERO_LINKS', '1')
+    vi.stubEnv('NODE_SKIP_PLATFORM_CHECK', '1')
+    vi.stubEnv('NODE_OPTIONS', '--import file:///X:/release/node-mod/register.mjs')
+    vi.stubEnv('NODE_PATH', 'X:\\release\\node-mod\\node_modules')
+    vi.stubEnv('NODE_DEBUG', 'esm')
+    try {
+      const env = runnerEnvironment('/tmp/request', [process.execPath, '/repo/runner.js'])
+      expect(env.NODE_SKIP_PLATFORM_CHECK).toBe('1')
+      expect(env.NODE_OPTIONS).toBe('--import file:///X:/release/node-mod/register.mjs')
+      expect(env.NODE_PATH).toBe('X:\\release\\node-mod\\node_modules')
+      expect(env.NODE_DEBUG).toBeUndefined()
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('validates every Node-baseline NUL location before launch', () => {
     expect(targetEnvironment(spec)).toMatchObject({ EXPLICIT: 'yes' })
     expect(targetEnvironment({ ...spec, env: { '=C:': 'C:\\target' } }))
