@@ -1,6 +1,8 @@
 /** Typed Win32 process operations over the shared binding table. */
 
 import koffi from 'koffi'
+import { release } from 'node:os'
+import { platform } from 'node:process'
 import * as abi from './abi.ts'
 import {
   allocProcessInfo,
@@ -330,12 +332,50 @@ export function waitForProcessExit(api: Win32ProcessBindings, process: NativePtr
   }
 }
 
+/**
+ * Report whether a Windows build predates nested Job Objects (Windows 8 /
+ * Server 2012, kernel 6.2). On those hosts a process that already belongs to
+ * a Job cannot be assigned to a second one: AssignProcessToJobObject fails
+ * with ERROR_ACCESS_DENIED. The Win7 release nests by design -- the local
+ * subprocess runner owns the managed-range Job while the ACL sandbox owns its
+ * own kill-on-close Job around the restricted-token child -- so those hosts
+ * must let the inner child break away from the outer Job first.
+ * @param osRelease - `os.release()` style kernel version string.
+ * @returns whether Job Objects on this kernel cannot be nested.
+ */
+export function nestedJobsUnsupported(osRelease: string): boolean {
+  const [rawMajor = '', rawMinor = ''] = osRelease.split('.')
+  const major = Number.parseInt(rawMajor, 10)
+  const minor = Number.parseInt(rawMinor, 10)
+  if (!Number.isInteger(major) || major <= 0) return false
+  if (major !== 6) return major < 6
+  return !Number.isInteger(minor) || minor < 2
+}
+
+/** Whether this host needs the Windows 7 Job breakaway path. */
+function hostLacksNestedJobs(): boolean {
+  return platform === 'win32' && nestedJobsUnsupported(release())
+}
+
+/**
+ * Build the creation flags for a child that is assigned to its own Job.
+ * @param extra - additional CreateProcess flags for the caller's variant.
+ * @returns suspended-create flags, with Job breakaway added on Windows 7.
+ */
+function jobChildCreationFlags(extra = 0): number {
+  const breakaway = hostLacksNestedJobs() ? abi.CREATE_BREAKAWAY_FROM_JOB : 0
+  return abi.CREATE_SUSPENDED | extra | breakaway
+}
+
 function createKillOnCloseJob(api: Win32ProcessBindings): NativePtr {
   const job = api.createJobObjectW(null, null)
   if (isNullPtr(job)) throwLastError(api, 'CreateJobObjectW')
   const information = Buffer.alloc(abi.JOBOBJECT_EXTENDED_LIMIT_SIZE)
+  // Windows 7 members must be allowed to break away, or the ACL sandbox
+  // cannot put its restricted-token child into its own kill-on-close Job.
+  const breakawayOk = hostLacksNestedJobs() ? abi.JOB_OBJECT_LIMIT_BREAKAWAY_OK : 0
   information.writeUInt32LE(
-    abi.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+    abi.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | breakawayOk,
     abi.JOBOBJECT_EXTENDED_LIMIT_FLAGS_OFFSET,
   )
   if (api.setInformationJobObject(
@@ -506,7 +546,7 @@ export function spawnInheritedJobProcess(
       api,
       options,
       commandLine,
-      abi.CREATE_SUSPENDED,
+      jobChildCreationFlags(),
       startupInfo,
       processInfo,
     ))
@@ -531,7 +571,7 @@ export function spawnCurrentTokenJobProcess(
       null,
       null,
       1,
-      abi.CREATE_SUSPENDED | abi.CREATE_UNICODE_ENVIRONMENT,
+      jobChildCreationFlags(abi.CREATE_UNICODE_ENVIRONMENT),
       environment,
       options.cwd,
       startupInfo,
