@@ -149,9 +149,8 @@ export default defineConfig({
   base: './',
   plugins: [rejectStandaloneServe(), clientDocumentTitle(), react(), emitPreviewPage()],
   build: {
-    // The worker bootstrap holds its page at top-level await; Vite's default
-    // `modules` target (es2020-era) rejects that syntax.
-    target: 'es2022',
+    // Chrome 109 是 Windows 7 可用的最后一个 Chrome 主版本；它支持预览页所需的顶层 await。
+    target: 'chrome109',
     sourcemap: true,
     rollupOptions: {
       input: {

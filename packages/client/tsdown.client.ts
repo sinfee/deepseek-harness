@@ -30,6 +30,9 @@ const INLINE_CSS_VIRTUAL_PREFIX = '\0dsh-inline-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 const INLINE_CSS_QUERY = '?inline'
 
+/** Windows 7 可用的最后一个 Chrome 主版本，也是所有浏览器产物的最低目标。 */
+const WINDOWS_7_BROWSER_TARGET = 'chrome109'
+
 /** Emit one plugin-owned style injector and an optional CSS Modules export. */
 function styleInjectionModule(
   id: string,
@@ -261,7 +264,7 @@ function staticLinkedConfig(id: string, entry: string, outputName = basename(ent
     outDir: 'lib',
     format: ['esm'],
     platform: 'browser',
-    target: 'es2024',
+    target: WINDOWS_7_BROWSER_TARGET,
     fixedExtension: false,
     dts: false,
     clean: false,
@@ -436,6 +439,7 @@ function clientConfig(id: string, entry: string): UserConfig {
     outDir: 'lib',
     format: 'cjs',
     platform: 'browser',
+    target: WINDOWS_7_BROWSER_TARGET,
     // Types ship from lib/types (tsc); dts here would wrap the banner/footer into .d.cts and break parsing.
     dts: false,
     // Plugin code is fetched outside Vite's module graph, so its own bundle
