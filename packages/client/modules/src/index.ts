@@ -218,6 +218,25 @@ function clientExportOf(pkgName: string, exportsField: unknown): string | undefi
   throw new Error(`client-modules: ${pkgName} exports["./client"] must be a string or an object with a string default`)
 }
 
+/** 优先解析零链接发布代理记录的真实浏览器入口。 */
+function physicalClientTargetOf(pkgName: string, dshField: unknown): string | undefined {
+  if (typeof dshField !== 'object' || dshField === null) return undefined
+  const moduleFallback = (dshField as Record<string, unknown>).moduleFallback
+  if (typeof moduleFallback !== 'object' || moduleFallback === null) return undefined
+  const targets = (moduleFallback as Record<string, unknown>).targets
+  if (typeof targets !== 'object' || targets === null) return undefined
+  const target = (targets as Record<string, unknown>)['./client']
+  if (target === undefined) return undefined
+  if (typeof target !== 'string') {
+    throw new Error(`client-modules: ${pkgName} dsh.moduleFallback.targets["./client"] must be a file URL`)
+  }
+  try {
+    return fileURLToPath(target)
+  } catch {
+    throw new Error(`client-modules: ${pkgName} dsh.moduleFallback.targets["./client"] must be a file URL`)
+  }
+}
+
 /** sha1 content hash shortened to 12 hex chars (combo / graph / rebuilt-artifact rev). */
 function shortHash(input: string | Buffer): string {
   return createHash('sha1').update(input).digest('hex').slice(0, HASH_REVISION_LENGTH)
@@ -460,6 +479,36 @@ const CLIENT_MODULES_ID = '@deepseek-ai/dsh-client-modules'
 /** Dynamic bundles grouped into the parser bootstrap batch before the Vite shell. */
 const PARSER_PRELOAD_IDS = [CLIENT_MODULES_ID] as const
 
+/** Windows 7 上 Chrome 109 缺少、但浏览器客户端实际会调用的运行时 API。 */
+const CHROME_109_POLYFILLS = `
+if(typeof Promise.withResolvers!=="function"){
+  Object.defineProperty(Promise,"withResolvers",{configurable:true,writable:true,value:function(){
+    let resolve
+    let reject
+    const promise=new Promise((onFulfilled,onRejected)=>{resolve=onFulfilled;reject=onRejected})
+    return {promise,resolve,reject}
+  }})
+}
+if(typeof AbortSignal!=="undefined"&&typeof AbortSignal.any!=="function"){
+  Object.defineProperty(AbortSignal,"any",{configurable:true,writable:true,value:function(signals){
+    const controller=new AbortController()
+    const cleanups=[]
+    const cleanup=()=>{for(const dispose of cleanups)dispose();cleanups.length=0}
+    const abort=signal=>{
+      if(controller.signal.aborted)return
+      cleanup()
+      controller.abort(signal.reason)
+    }
+    for(const signal of signals){
+      if(signal.aborted){abort(signal);break}
+      const listener=()=>abort(signal)
+      signal.addEventListener("abort",listener,{once:true})
+      cleanups.push(()=>signal.removeEventListener("abort",listener))
+    }
+    return controller.signal
+  }})
+}`
+
 /**
  * The boot protocol as index injection rows. The inline registration queue
  * precedes the application-batch preload and the blocking bootstrap batch. Its
@@ -473,7 +522,7 @@ const PARSER_PRELOAD_IDS = [CLIENT_MODULES_ID] as const
  */
 export function bootInjections(graph: WebBootGraph): IndexInjection[] {
   const bootstrapId = JSON.stringify(CLIENT_MODULES_ID)
-  const queue = `(()=>{
+  const queue = `(()=>{${CHROME_109_POLYFILLS}
 const pendingQueue=[]
 window.__ModuleLoader__={
   mode:"queue",
@@ -762,12 +811,14 @@ export class ClientModuleRegistry extends Service {
       this.pkgMeta.set(sourceKey, null)
       return null
     }
-    const clientRel = clientExportOf(packageName, pkg.exports)
-    if (clientRel === undefined) {
+    // 发布代理的 exports 指向 ESM 转发桩；Web 组合路由必须读取真实 client.js。
+    const physicalClientPath = physicalClientTargetOf(packageName, dsh)
+    const clientRel = physicalClientPath === undefined ? clientExportOf(packageName, pkg.exports) : undefined
+    if (physicalClientPath === undefined && clientRel === undefined) {
       throw new Error(`client-modules: ${packageName} declares dsh.client but exports no "./client" bundle`)
     }
     const meta: PkgMeta = {
-      clientPath: join(dirname(pkgPath), clientRel),
+      clientPath: physicalClientPath ?? join(dirname(pkgPath), clientRel!),
       ...(decl.inject !== undefined ? { inject: decl.inject } : {}),
       external: decl.external ?? [],
       immediately: decl.immediately === true,

@@ -41,6 +41,7 @@ describe('RepositoryCleaner', () => {
     write(join(root, '.dsh-build/client-build-environment.json'))
     write(join(root, 'root.tsbuildinfo'))
     write(join(root, 'packages/removed/ghost/node_modules/.bin/tool'))
+    write(join(root, 'vendor/retired/node_modules/.bin/tool'))
 
     await new RepositoryCleaner(root).clean()
 
@@ -50,6 +51,7 @@ describe('RepositoryCleaner', () => {
     expect(existsSync(join(root, '.dsh-build'))).toBe(false)
     expect(existsSync(join(root, 'root.tsbuildinfo'))).toBe(false)
     expect(existsSync(join(root, 'packages/removed/ghost'))).toBe(false)
+    expect(existsSync(join(root, 'vendor/retired'))).toBe(false)
   })
 
   it('does not delete any target when a manifest-less package contains an unknown file', async () => {

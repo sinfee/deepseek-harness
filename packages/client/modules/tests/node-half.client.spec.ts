@@ -162,6 +162,17 @@ const bootGraph = (): WebBootGraph => ({
 })
 
 describe('HTML bootstrap facade', () => {
+  it('installs the Chrome 109 runtime polyfills before the blocking bootstrap bundle', () => {
+    const graph = bootGraph()
+    const { html } = injectedFacade(graph)
+    const promisePolyfillAt = html.indexOf('Object.defineProperty(Promise,"withResolvers"')
+    const abortPolyfillAt = html.indexOf('Object.defineProperty(AbortSignal,"any"')
+    const bootstrapAt = html.indexOf(`<script src="${BOOTSTRAP_URL.replaceAll('&', '&amp;')}"></script>`)
+    expect(promisePolyfillAt).toBeGreaterThan(-1)
+    expect(abortPolyfillAt).toBeGreaterThan(promisePolyfillAt)
+    expect(bootstrapAt).toBeGreaterThan(abortPolyfillAt)
+  })
+
   it('precedes blocking preloads and the boot graph, then becomes the live registration target', async () => {
     const graph = bootGraph()
     const { html, target } = injectedFacade(graph)
@@ -284,6 +295,38 @@ describe('client bundle activation', () => {
 
     expect(service.clientPath(packageName)).toBe(clientPath)
     expect(service.graph().entries.map(entry => entry.id)).toEqual([packageName])
+  })
+
+  it('serves the physical client bundle behind a zero-link release proxy', async () => {
+    const packageName = '@fixture/physical-proxy'
+    const proxyClientPath = writePackage(packageName)
+    const packageRoot = dirname(dirname(proxyClientPath))
+    const physicalClientPath = join(root!, 'physical', 'client.js')
+    const physicalSource = 'window.__physicalProxyClient = true\n'
+    mkdirSync(dirname(proxyClientPath), { recursive: true })
+    mkdirSync(dirname(physicalClientPath), { recursive: true })
+    writeFileSync(proxyClientPath, 'export * from "file:///invalid-proxy-target.js"\n')
+    writeFileSync(physicalClientPath, physicalSource)
+    writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
+      name: packageName,
+      exports: {
+        './client': './lib/client.js',
+        './package.json': './package.json',
+      },
+      dsh: {
+        client: { platform: 'web' },
+        moduleFallback: {
+          targets: { './client': pathToFileURL(physicalClientPath).href },
+        },
+      },
+    }))
+
+    const { service, route } = constructWithRoute([packageName])
+    expect(service.clientPath(packageName)).toBe(physicalClientPath)
+    const response = await routeRequest(route, service.graph().batches[0]!.url)
+    expect(response.status).toBe(200)
+    expect(response.body.toString()).toContain(physicalSource.trim())
+    expect(response.body.toString()).not.toContain('invalid-proxy-target')
   })
 
   it.each(['relative', 'absolute'] as const)(
