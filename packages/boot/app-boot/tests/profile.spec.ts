@@ -744,6 +744,10 @@ describe('healProfilesModuleFallback', () => {
       './legacy/': './legacy/',
       './types': { types: './feature.d.ts' },
     }
+    bundleManifest.dsh = {
+      bundle: { patch: './cordis.patch.yml' },
+      client: { platform: 'web', immediately: true },
+    }
     writeFileSync(join(bundleDir, 'package.json'), JSON.stringify(bundleManifest))
     writeFileSync(join(bundleDir, 'feature.js'), 'export const feature = "proxied"\n')
     const home = tmp()
@@ -756,13 +760,14 @@ describe('healProfilesModuleFallback', () => {
       const proxyManifest = JSON.parse(readFileSync(join(proxy, 'package.json'), 'utf8')) as {
         version: unknown
         exports: unknown
-        dsh: { moduleFallback: { targets: Record<string, unknown> } }
+        dsh: { client?: unknown; moduleFallback: { targets: Record<string, unknown> } }
       }
       expect(proxyManifest).toMatchObject({
         version: '0.0.0',
         exports: { '.': './entry-0.js', './feature': './entry-1.js' },
       })
       expect(proxyManifest.dsh.moduleFallback.targets['.']).toEqual(expect.stringContaining('/bundle-a/index.js'))
+      expect(proxyManifest.dsh.client).toEqual({ platform: 'web', immediately: true })
       await expect(import(join(proxy, 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })
       await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ feature: 'proxied' })
       await healProfilesModuleFallback({ installAnchor: anchor, home })
