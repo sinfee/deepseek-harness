@@ -1,7 +1,7 @@
 /** Launch the Desktop profile through the Web application and report its URL to Electron. */
 
 import { delimiter, join } from 'node:path'
-import { loadLayeredEnv, loadProfileDirectory } from '@deepseek-ai/dsh-app-boot'
+import { healProfilesModuleFallback, loadLayeredEnv, loadProfileDirectory } from '@deepseek-ai/dsh-app-boot'
 import { runProfile } from '@deepseek-ai/dsh/profile-boot'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
@@ -15,6 +15,16 @@ async function main(): Promise<void> {
   const projectDir = process.argv[3] as string
   const installAnchor = join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
   const profile = loadProfileDirectory('dsh', projectDir, installAnchor)
+  const home = resolveDshHome()
+  const isZeroLinks = process.platform === 'win32' || process.env.DSH_ZERO_LINKS === '1'
+  if (isZeroLinks) {
+    await healProfilesModuleFallback({
+      installAnchor,
+      profile,
+      home,
+      materialize: true,
+    })
+  }
   const application = runProfile({
     environment: loadLayeredEnv('dsh'),
     profile: 'desktop',

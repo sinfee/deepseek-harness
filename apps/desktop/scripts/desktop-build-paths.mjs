@@ -3,7 +3,9 @@
 import { join, resolve } from 'node:path'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
-const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
+const BUILD_ROOT = process.env.DSH_DESKTOP_BUILD_ROOT
+  ? resolve(process.env.DSH_DESKTOP_BUILD_ROOT)
+  : join(APP_ROOT, '.desktop-build')
 const SUPPORTED_TARGETS = new Set(['mac-arm64', 'mac-x64', 'win-x64'])
 
 /**

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
@@ -75,6 +76,21 @@ export function createElectronBuilderConfig(
   }
   const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
   if (preparedRuntime !== undefined) buildPaths.dsh = preparedRuntime
+  const releaseDir = env.DSH_RELEASE_DIR
+    ?? (existsSync('X:/labs/dsh-win7/release') ? 'X:/labs/dsh-win7/release' : undefined)
+
+  const extraResources = [
+    { from: buildPaths.runtime, to: 'runtime' },
+    { from: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)), to: 'icon.png' },
+  ]
+  if (resolvedPlatform === 'win32' && releaseDir && existsSync(releaseDir)) {
+    for (const sub of ['psh', 'python', 'py-mod', 'bin']) {
+      const subPath = join(releaseDir, sub)
+      if (existsSync(subPath)) {
+        extraResources.push({ from: subPath, to: sub })
+      }
+    }
+  }
   return {
     appId,
     extraMetadata: { dshDesktopAppId: appId, dshMandatoryUpdatePolicy: policy },
@@ -114,10 +130,7 @@ export function createElectronBuilderConfig(
       '**/spawn-helper',
       '**/@vscode/ripgrep/bin/rg',
     ],
-    extraResources: [
-      { from: buildPaths.runtime, to: 'runtime' },
-      { from: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)), to: 'icon.png' },
-    ],
+    extraResources,
     mac: {
       icon: fileURLToPath(new URL('../resources/icon-macos.png', import.meta.url)),
       category: 'public.app-category.developer-tools',

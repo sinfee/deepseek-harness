@@ -1,9 +1,58 @@
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+function setupWin7PortableEnvironment(): void {
+  if (process.platform !== 'win32') return
+  const resources = process.resourcesPath
+  if (resources && existsSync(resources)) {
+    const pathsToPrepend: string[] = []
+    for (const tool of ['psh', 'python', 'bin', 'node']) {
+      const candidate = join(resources, tool)
+      if (existsSync(candidate)) {
+        pathsToPrepend.push(candidate)
+      }
+    }
+    if (pathsToPrepend.length > 0) {
+      process.env.PATH = `${pathsToPrepend.join(';')};${process.env.PATH ?? ''}`
+    }
+
+    const pyMod = join(resources, 'py-mod')
+    if (existsSync(pyMod)) {
+      process.env.PYTHONPATH = process.env.PYTHONPATH ? `${pyMod};${process.env.PYTHONPATH}` : pyMod
+    }
+
+    const dshCandidate = join(resources, 'dsh')
+    if (!process.env.DSH_DESKTOP_PROJECT_DIR && existsSync(dshCandidate)) {
+      process.env.DSH_DESKTOP_PROJECT_DIR = dshCandidate
+    }
+
+    const nodeModCandidate = join(resources, 'node-mod')
+    if (existsSync(nodeModCandidate)) {
+      process.env.DSH_NODE_MOD = nodeModCandidate
+      const nodeModules1 = join(nodeModCandidate, 'node_modules')
+      const nodeModules2 = join(resources, 'dsh', 'node_modules')
+      process.env.NODE_PATH = `${nodeModules1};${nodeModules2}`
+      const registerMjs = join(nodeModCandidate, 'register.mjs').replace(/\\/g, '/')
+      const preloadSharp = join(nodeModCandidate, 'preload_sharp.cjs').replace(/\\/g, '/')
+      process.env.NODE_OPTIONS = existsSync(join(nodeModCandidate, 'preload_sharp.cjs'))
+        ? `--require "${preloadSharp}" --import "file:///${registerMjs}"`
+        : `--import "file:///${registerMjs}"`
+    }
+  }
+
+  if (process.env.DSH_HOME) {
+    if (!process.env.DSH_AGENTS_HOME) {
+      process.env.DSH_AGENTS_HOME = join(process.env.DSH_HOME, 'agents')
+    }
+  }
+}
+
+setupWin7PortableEnvironment()
 import {
   app,
   BrowserWindow,
@@ -88,13 +137,16 @@ interface RuntimeResources {
 
 function runtimeResources(): RuntimeResources {
   const development = !app.isPackaged
-  const node = process.execPath
+  const nodeBinary = join(process.resourcesPath, 'node', process.platform === 'win32' ? 'node.exe' : 'node')
+  const node = process.env.DSH_DESKTOP_NODE_BINARY
+    ?? (existsSync(nodeBinary) ? nodeBinary : process.execPath)
   const nodeBin = development ? join(app.getAppPath(), 'scripts', 'node-bin') : join(process.resourcesPath, 'runtime', 'bin')
   const pnpm = (development ? process.env.DSH_DESKTOP_PNPM_ENTRY : undefined)
     ?? (development ? join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
       : join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs'))
-  const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
-    ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh'))
+  const resourcesDsh = join(process.resourcesPath, 'dsh')
+  const dsh = process.env.DSH_DESKTOP_DSH_DIR
+    ?? (existsSync(resourcesDsh) ? resourcesDsh : (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh')))
   return { node, nodeBin, pnpm, dsh }
 }
 
@@ -187,6 +239,22 @@ async function main(): Promise<void> {
   const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
   const resources = runtimeResources()
   const paths = resolveDesktopPaths()
+  if (process.platform === 'win32' && !existsSync(join(paths.profile, 'package.json'))) {
+    mkdirSync(paths.profile, { recursive: true })
+    writeFileSync(join(paths.profile, 'package.json'), JSON.stringify({
+      name: 'dsh-profile-desktop',
+      private: true,
+      dependencies: {},
+      dsh: {
+        profile: {
+          bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'],
+          patchReload: 'startup',
+        },
+      },
+    }, undefined, 2) + '\n')
+    writeFileSync(join(paths.profile, 'cordis.patch.yml'), '[]\n')
+    writeFileSync(join(paths.profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n')
+  }
   const development = !app.isPackaged
   const activeProject = paths.profile
   const manager = new DesktopProjectManager(paths, resources)
@@ -326,7 +394,9 @@ async function main(): Promise<void> {
     startup ??= (async () => {
       await navigateMain(applicationUrl)
       await backend.start(async () => {
-        await manager.applyRelease(app.isPackaged)
+        if (existsSync(join(resources.dsh, 'desktop-runtime.json'))) {
+          await manager.applyRelease(app.isPackaged)
+        }
       })
       if (backend.host !== undefined) updateJournal?.action('workspace-ready')
       // The existing Web document resumes through the boot IPC response.

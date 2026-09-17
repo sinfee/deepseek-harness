@@ -9,7 +9,11 @@ import {
   resolveDesktopAutoUpdateConfig,
 } from './desktop-auto-update-environment.mjs'
 import { desktopTargetBuildPaths } from './desktop-build-paths.mjs'
-import { packageMacOSArtifacts, type DesktopPrepackagedArtifact } from './package-macos.ts'
+interface DesktopPrepackagedArtifact {
+  readonly format: string
+  readonly appPath: string
+  readonly output: string
+}
 import { loadDesktopPackageEnvironment, validateDesktopPackageEnvironment } from './desktop-package-environment.mjs'
 import { createPackagingRun } from './packaging-run.mjs'
 import { withMacOSSigningKeychain } from './macos-signing-keychain.mjs'
@@ -263,7 +267,10 @@ function runPnpm(
   }
   if (run !== undefined) return run.run(args.join(' '), process.execPath, [pnpmEntry, ...args], { cwd, env })
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, [pnpmEntry, ...args], {
+    const isBinary = pnpmEntry.toLowerCase().endsWith('.exe')
+    const command = isBinary ? pnpmEntry : process.execPath
+    const commandArgs = isBinary ? args : [pnpmEntry, ...args]
+    const child = spawn(command, commandArgs, {
       cwd,
       env,
       stdio: 'inherit',
@@ -368,6 +375,7 @@ export async function packageTarget(
       ...desktopElectronBuilderArguments(target, true),
       '--config.mac.notarize=false',
     ], electronBuilderEnv)
+    const { packageMacOSArtifacts } = await import('./package-macos.ts')
     await packageMacOSArtifacts({
       arch: target.arch,
       version: packageVersion(join(APP_ROOT, 'package.json'), 'desktop package'),
