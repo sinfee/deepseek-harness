@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url'
 
 function setupWin7PortableEnvironment(): void {
   if (process.platform !== 'win32') return
+  process.env.DSH_ZERO_LINKS = '1'
+  process.env.NODE_SKIP_PLATFORM_CHECK = '1'
   const resources = process.resourcesPath
   if (resources && existsSync(resources)) {
     const pathsToPrepend: string[] = []
