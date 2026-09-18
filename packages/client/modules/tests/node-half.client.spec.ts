@@ -203,17 +203,6 @@ const bootGraph = (): WebBootGraph => ({
 })
 
 describe('HTML bootstrap facade', () => {
-  it('installs the Chrome 109 runtime polyfills before the blocking bootstrap bundle', () => {
-    const graph = bootGraph()
-    const { html } = injectedFacade(graph)
-    const promisePolyfillAt = html.indexOf('Object.defineProperty(Promise,"withResolvers"')
-    const abortPolyfillAt = html.indexOf('Object.defineProperty(AbortSignal,"any"')
-    const bootstrapAt = html.indexOf(`<script src="${BOOTSTRAP_URL.replaceAll('&', '&amp;')}"></script>`)
-    expect(promisePolyfillAt).toBeGreaterThan(-1)
-    expect(abortPolyfillAt).toBeGreaterThan(promisePolyfillAt)
-    expect(bootstrapAt).toBeGreaterThan(abortPolyfillAt)
-  })
-
   it('precedes blocking preloads and the boot graph, then becomes the live registration target', async () => {
     const graph = bootGraph()
     const { html, target } = injectedFacade(graph)

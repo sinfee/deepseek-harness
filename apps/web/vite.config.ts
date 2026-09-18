@@ -160,8 +160,8 @@ export default defineConfig({
     productWebBundleIsolation(src('../..'), src('.')),
   ],
   build: {
-    // Chrome 109 是 Windows 7 可用的最后一个 Chrome 主版本；它支持预览页所需的顶层 await。
-    target: 'chrome109',
+    // 共享前端以 Win7 专版 Electron 的 Chromium 152 为最低目标。
+    target: 'chrome152',
     sourcemap: true,
     rollupOptions: {
       input: {

@@ -516,36 +516,6 @@ const CLIENT_MODULES_ID = '@deepseek-ai/dsh-client-modules'
 /** Dynamic bundles grouped into the parser bootstrap batch before the Vite shell. */
 const PARSER_PRELOAD_IDS = [CLIENT_MODULES_ID] as const
 
-/** Windows 7 上 Chrome 109 缺少、但浏览器客户端实际会调用的运行时 API。 */
-const CHROME_109_POLYFILLS = `
-if(typeof Promise.withResolvers!=="function"){
-  Object.defineProperty(Promise,"withResolvers",{configurable:true,writable:true,value:function(){
-    let resolve
-    let reject
-    const promise=new Promise((onFulfilled,onRejected)=>{resolve=onFulfilled;reject=onRejected})
-    return {promise,resolve,reject}
-  }})
-}
-if(typeof AbortSignal!=="undefined"&&typeof AbortSignal.any!=="function"){
-  Object.defineProperty(AbortSignal,"any",{configurable:true,writable:true,value:function(signals){
-    const controller=new AbortController()
-    const cleanups=[]
-    const cleanup=()=>{for(const dispose of cleanups)dispose();cleanups.length=0}
-    const abort=signal=>{
-      if(controller.signal.aborted)return
-      cleanup()
-      controller.abort(signal.reason)
-    }
-    for(const signal of signals){
-      if(signal.aborted){abort(signal);break}
-      const listener=()=>abort(signal)
-      signal.addEventListener("abort",listener,{once:true})
-      cleanups.push(()=>signal.removeEventListener("abort",listener))
-    }
-    return controller.signal
-  }})
-}`
-
 /**
  * The boot protocol as index injection rows. The inline registration queue
  * precedes the application-batch preload and the blocking bootstrap batch. Its
@@ -559,7 +529,7 @@ if(typeof AbortSignal!=="undefined"&&typeof AbortSignal.any!=="function"){
  */
 export function bootInjections(graph: WebBootGraph): IndexInjection[] {
   const bootstrapId = JSON.stringify(CLIENT_MODULES_ID)
-  const queue = `(()=>{${CHROME_109_POLYFILLS}
+  const queue = `(()=>{
 const pendingQueue=[]
 window.__ModuleLoader__={
   mode:"queue",
