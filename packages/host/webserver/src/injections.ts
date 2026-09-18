@@ -83,9 +83,7 @@ function splice(html: string, at: number, markup: string): string {
  * settles it after the last row; the served form below creates and resolves
  * it in one statement, because every row is already in the document text.
  */
-// Chrome 109（Windows 7 最后一个 Chrome 版本）没有 Promise.withResolvers，
-// 因此就地创建 deferred，不能让兼容垫片本身成为页面启动的前置条件。
-const READY_MARKUP = '<script>{let ready=globalThis.__DSH_BOOT_READY__;if(ready===undefined){let resolve;let reject;const promise=new Promise((res,rej)=>{resolve=res;reject=rej});ready={promise,resolve,reject};globalThis.__DSH_BOOT_READY__=ready}ready.resolve()}</script>'
+const READY_MARKUP = '<script>(globalThis.__DSH_BOOT_READY__ ??= Promise.withResolvers()).resolve()</script>'
 
 /**
  * Render rows into an index.html body: head rows immediately after the

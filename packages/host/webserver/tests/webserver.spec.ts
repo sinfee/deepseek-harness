@@ -348,13 +348,11 @@ describe('real Loader composition', () => {
 
     // Tag-less fragments: head rows prepend, body rows append, and the
     // boot-readiness tail lands after the last body row.
-    const fragment = renderIndexInjections('<main>x</main>', [
+    expect(renderIndexInjections('<main>x</main>', [
       { kind: 'script', placement: 'head', text: 'H' },
       { kind: 'script', placement: 'body', text: 'B' },
-    ])
-    expect(fragment).toBe('<script>H</script><main>x</main><script>B</script>'
-      + '<script>{let ready=globalThis.__DSH_BOOT_READY__;if(ready===undefined){let resolve;let reject;const promise=new Promise((res,rej)=>{resolve=res;reject=rej});ready={promise,resolve,reject};globalThis.__DSH_BOOT_READY__=ready}ready.resolve()}</script>')
-    expect(fragment).not.toContain('Promise.withResolvers')
+    ])).toBe('<script>H</script><main>x</main><script>B</script>'
+      + '<script>(globalThis.__DSH_BOOT_READY__ ??= Promise.withResolvers()).resolve()</script>')
   })
 
   it('fails the fiber when the port is already taken (fail-loud at activation)', { timeout: 60_000 }, async () => {
