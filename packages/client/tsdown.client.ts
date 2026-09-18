@@ -38,8 +38,8 @@ const INLINE_CSS_QUERY = '?inline'
 /** Image imports become base64 data URLs embedded in the plugin's own bundle. */
 const IMAGE_MEDIA_TYPES = new Map([['.svg', 'image/svg+xml'], ['.png', 'image/png'], ['.webp', 'image/webp']])
 
-/** Windows 7 可用的最后一个 Chrome 主版本，也是所有浏览器产物的最低目标。 */
-const WINDOWS_7_BROWSER_TARGET = 'chrome109'
+/** Win7 专版 Electron 与独立 Chromium 共用的浏览器最低目标。 */
+const WINDOWS_7_BROWSER_TARGET = 'chrome152'
 
 /** Emit one plugin-owned style injector and an optional CSS Modules export. */
 function styleInjectionModule(
