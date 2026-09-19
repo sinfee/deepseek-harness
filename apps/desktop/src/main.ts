@@ -69,6 +69,11 @@ import {
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
 } from 'electron'
+
+if (process.platform === 'win32') {
+  // 避免虚拟机或老旧显卡驱动下 GPU 进程崩溃后限制重启或导致黑屏
+  app.commandLine.appendSwitch('disable-gpu-process-crash-limit')
+}
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager } from './project-manager.ts'
 import { DesktopHostProcess, DesktopHostUncleanExitError } from './host-process.ts'
@@ -742,8 +747,10 @@ async function main(): Promise<void> {
     })
     window.webContents.on('render-process-gone', (_event, details) => {
       navigation = undefined
-      if (!quitting && !window.isDestroyed() && details.reason !== 'clean-exit') {
+      if (!quitting && !shuttingDown && !window.isDestroyed() && details.reason !== 'clean-exit' && details.reason !== 'killed') {
         reportFatal(new Error(`Desktop renderer exited: ${details.reason}`))
+      } else {
+        console.info(`Desktop renderer exited (${details.reason}), skipping fatal recovery dialog.`)
       }
     })
     return window
