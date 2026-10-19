@@ -382,3 +382,7 @@ node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run test:upd
 ## 开发备注
 
 上线前 CDN 与容量决策见[桌面更新提案](../../.agents/notes/proposed/feature/2026-09-08-desktop-update-policy-and-installation.zh.md#cdn-and-capacity-qualification)。
+
+## 宿主插件更新
+
+桌面通过私有 IPC 接收插件更新重启请求。仅当请求指向当前 resources 且用户目录存在 pending.json 时启动随包 helper；helper 创建成功后桌面退出，安装结束后重新启动。helper 缺失或创建失败时保留当前桌面。该能力由宿主提供 plugin_update_bootstrap.mjs。
