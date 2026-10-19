@@ -73,6 +73,29 @@ afterEach(async () => {
 })
 
 describe('desktop host process', () => {
+  it('转发插件更新重启请求', async () => {
+    const source = HTTP_HOST.replace("if (request.url === '/fatal')", `
+      if (request.url === '/plugin-update') {
+        process.send({ type: 'plugin-update-restart', version: '1.2.0', staging: '/staging', resources: '/resources' })
+        response.end('sent')
+        return
+      }
+      if (request.url === '/fatal')`)
+    const runtime = projectWithHost(source)
+    const restart = vi.fn()
+    const failure = vi.fn()
+    const host = new DesktopHostProcess(process.execPath, runtime, runtime, undefined, process.env,
+      failure, undefined, undefined, undefined, restart)
+    hosts.push(host)
+    const ready = await host.start()
+    // 通过真实 Host 子进程发送 IPC，验证消息解析与回调分派。
+    await fetch(new URL('/plugin-update', ready.url))
+    await vi.waitFor(() => expect(restart).toHaveBeenCalledExactlyOnceWith({
+      type: 'plugin-update-restart', version: '1.2.0', staging: '/staging', resources: '/resources',
+    }))
+    expect(failure).not.toHaveBeenCalled()
+  })
+
   it('correlates task inspections and admission changes over private IPC', async () => {
     const host = hostProcess(projectWithHost())
     await expect(host.updateTasks('inspect')).rejects.toThrow('Host is unavailable')
@@ -195,6 +218,7 @@ describe('desktop host process', () => {
   it.each([
     ["process.send({ type: 'fatal', message: 'startup failed' }); process.disconnect()", 'startup failed'],
     ["process.send({ type: 'ready', url: 4 })", 'invalid IPC event'],
+    ["process.send({ type: 'plugin-update-restart', version: '1.2.0', staging: '/staging' })", 'invalid IPC event'],
     ["process.send({ type: 'fatal', message: 'startup failed', diagnostic: 42 })", 'invalid IPC event'],
     ['process.exit(0)', 'host stopped'],
   ])('rejects startup when the child fails before readiness: %s', async (source, message) => {
