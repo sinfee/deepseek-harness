@@ -8,8 +8,9 @@ import { WELCOME_IPC, type WelcomeApi, type WelcomeNotice, type WelcomeSaveResul
 const prefix = '--dsh-welcome-locale='
 const locale = process.argv.find(argument => argument.startsWith(prefix))?.slice(prefix.length)
 if (locale === undefined) throw new Error('desktop welcome: missing window locale')
+const productName = process.argv.find(argument => argument.startsWith('--dsh-welcome-product='))?.slice('--dsh-welcome-product='.length)
 const api: WelcomeApi = {
-  ...resolveDesktopLocale(locale),
+  ...resolveDesktopLocale(locale, productName ? { productName } : undefined),
   analytics: async (eventName, attributes) => {
     if (await api.analyticsEnabled()) await ipcRenderer.invoke(WELCOME_IPC.analytics, eventName, attributes)
   },
