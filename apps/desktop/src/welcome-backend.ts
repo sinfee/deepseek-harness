@@ -44,6 +44,7 @@ export async function connectDesktopWelcome(
   authenticatedUrl: string,
   send: (input: string, init?: RequestInit) => Promise<Response>,
   cookies: () => Promise<string> = () => Promise.resolve(''),
+  userLogin = true,
 ): Promise<DesktopWelcomeBackend> {
   const origin = new URL(authenticatedUrl).origin
   const authenticated = await send(authenticatedUrl, { credentials: 'include' })
@@ -114,7 +115,7 @@ export async function connectDesktopWelcome(
     }
     if (ref !== undefined && !record(states[ref])) throw new Error('desktop welcome: missing credential metadata')
     return {
-      loggedIn: (await account.state()).status === 'credential-stored',
+      loggedIn: userLogin && (await account.state()).status === 'credential-stored',
       hasApiKey: Object.values(states).some(value => record(value) && value.configured === true),
       writable: ref !== undefined && record(states[ref]) && states[ref].writable === true,
       localePreference: localePreference(namespaces),

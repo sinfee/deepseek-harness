@@ -102,6 +102,14 @@ describe('Desktop local packaging configuration', () => {
         .toEqual({ DSH_DESKTOP_PACKAGE_CACHE_DIR: directory })
     })
   })
+
+  it('仅显式本地未签名模式允许 Windows 缺少私有策略服务', () => {
+    const local = localMacOSPackageEnvironment({ DSH_DESKTOP_LOCAL_UNSIGNED: '1' })
+    expect(() => { validateDesktopPackageEnvironment(local, WINDOWS, { unsigned: true }) }).not.toThrow()
+    expect(() => { validateDesktopPackageEnvironment(localMacOSPackageEnvironment({}), WINDOWS, { unsigned: true }) }).toThrow()
+    expect(() => { validateDesktopPackageEnvironment(local, WINDOWS, { unsigned: false }) }).toThrow()
+  })
+  })
   it('selects macOS local defaults while excluding inherited release settings and retaining build networking', () => {
     const parent = {
       PATH: 'build-tools', HTTPS_PROXY: 'http://proxy.example:8080', DSH_DESKTOP_NPM_REGISTRY: 'https://registry.npmmirror.com',
