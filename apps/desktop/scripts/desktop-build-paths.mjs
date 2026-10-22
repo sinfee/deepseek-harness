@@ -38,11 +38,13 @@ function assertSupportedTarget(target) {
 /**
  * Return the mutable preparation and artifact directories owned by one release target.
  * @param {'mac-arm64' | 'mac-x64' | 'win-x64'} target - Supported Desktop target name.
+ * @param {NodeJS.ProcessEnv} env - 可覆盖构建根目录的环境。
  * @returns {{ root: string, artifacts: string, unsignedArtifacts: string, unnotarizedArtifacts: string, runtime: string, packageSet: string, dsh: string, dshPnpm: string, electron: string, packedDsh: string, packedVendor: string, packedLandlock: string, downloads: string }} Target paths plus the shared immutable download cache.
  */
-export function desktopTargetBuildPaths(target) {
+export function desktopTargetBuildPaths(target, env = process.env) {
   assertSupportedTarget(target)
-  const root = join(BUILD_ROOT, 'targets', target)
+  const buildRoot = env.DSH_DESKTOP_BUILD_ROOT === undefined ? BUILD_ROOT : resolve(env.DSH_DESKTOP_BUILD_ROOT)
+  const root = join(buildRoot, 'targets', target)
   const packed = join(root, 'packed')
   return {
     root,
@@ -57,7 +59,7 @@ export function desktopTargetBuildPaths(target) {
     packedDsh: join(packed, 'dsh'),
     packedVendor: join(packed, 'vendor'),
     packedLandlock: join(packed, 'landlock'),
-    downloads: join(BUILD_ROOT, 'downloads'),
+    downloads: resolve(env.DSH_DESKTOP_DOWNLOADS_ROOT ?? join(buildRoot, 'downloads')),
   }
 }
 
@@ -87,7 +89,7 @@ export function resolveDesktopTargetBuildPaths(
   hostPlatform = process.platform,
   hostArch = process.arch,
 ) {
-  return desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
+  return desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch), env)
 }
 
 /**

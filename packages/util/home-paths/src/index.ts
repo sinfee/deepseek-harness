@@ -27,6 +27,22 @@ export const DEFAULT_AGENTS_HOME_DISPLAY = `~/${AGENTS_HOME_DIR_NAME}`
 export const AGENTS_HOME_ENV = 'DSH_AGENTS_HOME'
 
 /**
+ * 在启动 profile、凭据或 Electron 状态前映射品牌数据根目录。
+ * @param env - 可写的启动环境；没有品牌变量时保持官方行为。
+ * @returns 已规范化的品牌根目录，或未启用映射时的 undefined。
+ */
+export function applyThkaiHome(env: Record<string, string | undefined> = process.env): string | undefined {
+  const selected = [env.THKAI_HOME, env['THKAI-HOME']].find(value => value !== undefined && value.trim().length > 0)
+  if (selected === undefined) return undefined
+  const home = resolve(expandHomePath(selected))
+  env.THKAI_HOME = home
+  env.DSH_HOME = home
+  env.DSH_DESKTOP_HOME = home
+  env.DSH_AGENTS_HOME = join(home, 'agents')
+  return home
+}
+
+/**
  * Give a native filesystem watcher one canonical spelling of a path, even
  * when its final components do not exist yet. The deepest existing ancestor
  * is resolved through {@link realpath}; when a suffix is missing, that

@@ -8,6 +8,11 @@ import {
 } from '../scripts/desktop-build-paths.mjs'
 
 describe('desktop build paths', () => {
+  it('将构建目录映射到源码树之外并保留目标隔离', () => {
+    const paths = desktopTargetBuildPaths('win-x64', { DSH_DESKTOP_BUILD_ROOT: join(process.cwd(), '..', 'work', 'desktop') })
+    expect(paths.runtime).toBe(join(process.cwd(), '..', 'work', 'desktop', 'targets', 'win-x64', 'runtime'))
+    expect(paths.downloads).toBe(join(process.cwd(), '..', 'work', 'desktop', 'downloads'))
+  })
   it('isolates every mutable build directory by complete target', () => {
     const arm64 = desktopTargetBuildPaths('mac-arm64')
     const x64 = desktopTargetBuildPaths('mac-x64')
@@ -40,6 +45,15 @@ describe('desktop build paths', () => {
     const x64 = desktopTargetBuildPaths('mac-x64')
     expect(arm64.downloads).toBe(x64.downloads)
     expect(arm64.downloads).not.toContain(`${sep}targets${sep}`)
+  })
+
+  it('跨发行批次共享显式缓存，仍将运行时隔离在各批次目录', () => {
+    const cache = join(process.cwd(), '..', 'work/downloads/desktop')
+    const first = desktopTargetBuildPaths('win-x64', { DSH_DESKTOP_BUILD_ROOT: join(process.cwd(), 'first'), DSH_DESKTOP_DOWNLOADS_ROOT: cache })
+    const second = desktopTargetBuildPaths('win-x64', { DSH_DESKTOP_BUILD_ROOT: join(process.cwd(), 'second'), DSH_DESKTOP_DOWNLOADS_ROOT: cache })
+    expect(first.downloads).toBe(cache)
+    expect(second.downloads).toBe(cache)
+    expect(first.runtime).not.toBe(second.runtime)
   })
 
   it('resolves the development primary runtime from the build target rather than the host architecture', () => {
