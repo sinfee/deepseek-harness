@@ -1425,30 +1425,48 @@ export interface DesktopLocale {
   readonly messages: DesktopMessages
 }
 
-/** Resolve Electron's locale to one shipped Desktop dictionary. */
-export function resolveDesktopLocale(locale: string): DesktopLocale {
+/** 桌面入口传入的品牌信息；共享字典不读取主进程环境变量。 */
+export interface DesktopBrand {
+  readonly productName: string
+  readonly upstreamVersion?: string
+}
+
+/**
+ * 根据语言及可选品牌信息生成桌面文案。
+ * @param locale - 操作系统或用户选择的语言。
+ * @param brand - 桌面入口传入的可选品牌及上游版本。
+ * @returns 保留语言键集合的桌面文案。
+ */
+export function resolveDesktopLocale(locale: string, brand?: DesktopBrand): DesktopLocale {
   const primary = locale.toLowerCase().split('-')[0]
-  if (primary !== undefined && Object.hasOwn(dictionaries, primary)) {
-    const id = primary as keyof typeof dictionaries
-    return { id: id === 'zh' ? 'zh-CN' : id, messages: dictionaries[id] }
-  }
-  return { id: 'en', messages: en }
+  const selected: DesktopLocale = (primary !== undefined && Object.hasOwn(dictionaries, primary))
+    ? { id: (primary === 'zh' ? 'zh-CN' : primary) as DesktopLocale['id'], messages: dictionaries[primary as keyof typeof dictionaries] }
+    : { id: 'en', messages: en }
+  const productName = brand?.productName
+  if (!productName) return selected
+  const messages = Object.fromEntries(Object.entries(selected.messages)
+    .map(([key, value]) => [key, value.replaceAll('DeepSeek Harness', () => productName)])) as DesktopMessages
+  const upstreamVersion = brand.upstreamVersion
+  return { ...selected, messages: { ...messages, aboutVersion: upstreamVersion
+    ? `${messages.aboutVersion}\n${selected.id === 'zh-CN' ? '依托上游' : 'Based on upstream'} DeepSeek Harness V${upstreamVersion}`
+    : messages.aboutVersion } }
 }
 
 /**
  * Choose a built-in dictionary from the shared preference, then ordered OS languages.
  * @param preference - explicit locale.preference, or null when no language was selected.
  * @param languages - operating-system languages in preference order.
+ * @param brand - 桌面入口提供的可选品牌及上游版本。
  * @returns the supported dictionary, falling back to English.
  */
-export function resolveDesktopStartupLocale(preference: string | null, languages: readonly string[]): DesktopLocale {
+export function resolveDesktopStartupLocale(preference: string | null, languages: readonly string[], brand?: DesktopBrand): DesktopLocale {
   const selected = preference?.toLowerCase()
-  if (selected !== undefined && Object.hasOwn(dictionaries, selected)) return resolveDesktopLocale(selected)
+  if (selected !== undefined && Object.hasOwn(dictionaries, selected)) return resolveDesktopLocale(selected, brand)
   for (const language of languages) {
     const primary = language.toLowerCase().split('-')[0]
-    if (primary !== undefined && Object.hasOwn(dictionaries, primary)) return resolveDesktopLocale(primary)
+    if (primary !== undefined && Object.hasOwn(dictionaries, primary)) return resolveDesktopLocale(primary, brand)
   }
-  return resolveDesktopLocale('en')
+  return resolveDesktopLocale('en', brand)
 }
 
 /** Replace named placeholders in one locale-owned message. */

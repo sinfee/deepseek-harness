@@ -4,6 +4,8 @@ description: "Desktop 在原生应用中运行 Harness 工作区。本参考文�
 
 # DeepSeek Harness 桌面端
 
+定制桌面入口可通过 `DSH_DESKTOP_PRODUCT_NAME` 提供应用品牌，菜单、托盘和窗口使用同一名称；`DSH_DESKTOP_UPSTREAM_VERSION` 为“关于”窗口补充构建时的上游版本。未提供品牌时沿用官方名称及文案。打包方负责提供匹配的主程序与托盘图标。
+
 [English](README.md) | 中文
 
 ## 概述

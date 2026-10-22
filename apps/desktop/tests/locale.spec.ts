@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest'
 import { en, formatDesktopMessage, resolveDesktopLocale, resolveDesktopStartupLocale, ja, zh, es, fr, de, ru, pt } from '../src/locale.ts'
 
 describe('desktop locale dictionaries', () => {
+  it('将品牌应用于中英文菜单和托盘，并在关于中保留上游版本', () => {
+    const brand = { productName: 'ThkAI3D', upstreamVersion: '0.2.1-rc.2' }
+    const chinese = resolveDesktopLocale('zh-CN', brand).messages
+    expect(chinese.aboutMenu).toBe('关于 ThkAI3D')
+    expect(chinese.aboutProduct).toBe('ThkAI3D')
+    expect(chinese.openApplication).toBe('打开 ThkAI3D')
+    expect(chinese.quitApplication).toBe('退出 ThkAI3D')
+    expect(formatDesktopMessage(chinese.aboutVersion, { version: '1.0.0' }))
+      .toBe('版本 V1.0.0\n依托上游 DeepSeek Harness V0.2.1-rc.2')
+    expect(resolveDesktopLocale('en', brand).messages.aboutMenu).toBe('About ThkAI3D')
+    expect(resolveDesktopLocale('en', brand).messages.aboutVersion).toContain('Based on upstream DeepSeek Harness V0.2.1-rc.2')
+    expect(resolveDesktopStartupLocale('zh', ['en'], brand).messages).toEqual(chinese)
+  })
+
   it('ships baseline and Japanese keys and falls back for unsupported languages', () => {
     expect(Object.keys(zh)).toEqual(Object.keys(en))
     expect(Object.keys(ja)).toEqual(Object.keys(en))

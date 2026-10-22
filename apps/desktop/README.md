@@ -4,6 +4,8 @@ description: "Desktop runs the Harness workspace in a native application. This r
 
 # DeepSeek Harness Desktop
 
+Custom desktop entries can set `DSH_DESKTOP_PRODUCT_NAME` to use the same brand in application menus, the tray, and windows. `DSH_DESKTOP_UPSTREAM_VERSION` adds the build's upstream version to About. Without a brand override, official names and copy remain in use. The packager supplies matching application and tray icons.
+
 English | [中文](README.zh.md)
 
 ## Summary

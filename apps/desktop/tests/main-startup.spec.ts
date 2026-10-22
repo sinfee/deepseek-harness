@@ -444,6 +444,8 @@ beforeEach(() => {
   vi.spyOn(console, 'info').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.stubEnv('DSH_DESKTOP_PNPM_ENTRY', 'test-pnpm')
+  vi.stubEnv('DSH_DESKTOP_PRODUCT_NAME', undefined)
+  vi.stubEnv('DSH_DESKTOP_UPSTREAM_VERSION', undefined)
   vi.stubEnv('DSH_DESKTOP_DSH_DIR', 'test-runtime')
   vi.stubEnv('DSH_DESKTOP_PRIMARY_RUNTIME_DIR', 'test-primary-runtime')
   vi.stubGlobal('process', { ...process, platform: 'win32', arch: 'x64', resourcesPath: 'desktop-test-resources' })
@@ -531,6 +533,24 @@ describe('desktop main startup', () => {
     } finally {
       vi.mocked(web.serveWebDocument).mockReset()
     }
+  })
+
+  it('将开发版品牌用于窗口、托盘和关于菜单，并保留上游版本', async () => {
+    vi.stubEnv('DSH_DESKTOP_PRODUCT_NAME', 'ThkAI3D-dev')
+    vi.stubEnv('DSH_DESKTOP_UPSTREAM_VERSION', '0.2.1-rc.2')
+    await readyForUpdate()
+    expect(harness.trays[0]!.setToolTip).toHaveBeenLastCalledWith('ThkAI3D-dev')
+    const about = applicationMenuItems()[0]!
+    expect(about.label).toContain('ThkAI3D-dev')
+    ;(about.click as () => void)()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(harness.dialog.showMessageBox.mock.lastCall![0]).toMatchObject({ message: 'ThkAI3D-dev' })
+    expect(harness.dialog.showMessageBox.mock.lastCall![0]).toHaveProperty('detail', expect.stringContaining('DeepSeek Harness V0.2.1-rc.2'))
+    const window = harness.windows[0]!
+    const event = { preventDefault: vi.fn() }
+    window.emit('page-title-updated', event, 'DeepSeek Harness')
+    expect(event.preventDefault).toHaveBeenCalledOnce()
+    expect(window.setTitle).toHaveBeenLastCalledWith('ThkAI3D-dev')
   })
 
   it('serves shell dialogs and their assets without forwarding them to the Host', async () => {

@@ -101,8 +101,11 @@ if (userData !== undefined) {
 }
 app.setAppLogsPath()
 
+const desktopBrand = process.env.DSH_DESKTOP_PRODUCT_NAME
+  ? { productName: process.env.DSH_DESKTOP_PRODUCT_NAME, upstreamVersion: process.env.DSH_DESKTOP_UPSTREAM_VERSION ?? '' }
+  : undefined
 function currentDesktopLocale(): ReturnType<typeof resolveDesktopLocale> {
-  return resolveDesktopLocale(windowsLanguage ?? app.getLocale())
+  return resolveDesktopLocale(windowsLanguage ?? app.getLocale(), desktopBrand)
 }
 /** Quit without the task confirmation; the caller has already decided the application must stop. */
 function quitWithoutConfirmation(): void {
@@ -269,6 +272,7 @@ function platformLoginUrl(authorizeUrl: string): string {
 
 function createWindow(preload: string, show = false, primary = false): BrowserWindow {
   const window = new BrowserWindow({
+    title: currentDesktopLocale().messages.aboutProduct,
     width: 1280,
     height: 820,
     minWidth: 520,
@@ -299,6 +303,10 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
       webviewTag: primary,
       devTools: true,
     },
+  })
+  if (desktopBrand) window.on('page-title-updated', (event, title) => {
+    event.preventDefault()
+    window.setTitle(title.replaceAll('DeepSeek Harness', () => desktopBrand.productName))
   })
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (['http:', 'https:'].includes(new URL(url).protocol)) void shell.openExternal(url)
@@ -435,7 +443,7 @@ async function main(): Promise<void> {
   let updateState: DesktopUpdateState = { phase: 'idle' }
   const systemLanguages = app.getPreferredSystemLanguages()
   let locale = windowsLanguage === undefined
-    ? resolveDesktopStartupLocale(null, systemLanguages) : resolveDesktopLocale(windowsLanguage)
+    ? resolveDesktopStartupLocale(null, systemLanguages, desktopBrand) : resolveDesktopLocale(windowsLanguage, desktopBrand)
   windowsLanguage = locale.id
   let mandatoryPolicy: DesktopMandatoryUpdatePolicy | undefined
   let mandatoryUI: DesktopMandatoryUpdateWindow | undefined
@@ -872,7 +880,7 @@ async function main(): Promise<void> {
     const window = mainWindow
     if (window === undefined || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame
       || typeof next !== 'string') return
-    const current = resolveDesktopStartupLocale(next, systemLanguages)
+    const current = resolveDesktopStartupLocale(next, systemLanguages, desktopBrand)
     writeDesktopLocaleCache(app.getPath('userData'), current.id)
     if (current.id === locale.id) return
     locale = current
@@ -1043,11 +1051,12 @@ async function main(): Promise<void> {
   const applicationIconPath = development ? join(app.getAppPath(), 'resources', 'icon-windows.png')
     : join(process.resourcesPath, 'icon.png')
   app.setAboutPanelOptions({
-    applicationName: 'DeepSeek Harness',
+    applicationName: currentDesktopLocale().messages.aboutProduct,
     applicationVersion: app.getVersion(),
     // The release has no separate build number; omit Electron's bundle version.
     version: '',
-    copyright: '',
+    copyright: process.env.DSH_DESKTOP_UPSTREAM_VERSION
+      ? `DeepSeek Harness V${process.env.DSH_DESKTOP_UPSTREAM_VERSION}` : '',
     iconPath: applicationIconPath,
   })
   // A custom application menu replaces Electron's default menu, so macOS needs
@@ -1314,7 +1323,7 @@ async function main(): Promise<void> {
     if (quitting || recovery.active) return
     const state = await readWelcomeState()
     if (isQuitting() || backend.state.phase !== 'ready') return
-    locale = resolveDesktopStartupLocale(state.localePreference, systemLanguages)
+    locale = resolveDesktopStartupLocale(state.localePreference, systemLanguages, desktopBrand)
     writeDesktopLocaleCache(app.getPath('userData'), locale.id)
     windowsLanguage = locale.id
     refreshApplicationMenu()
