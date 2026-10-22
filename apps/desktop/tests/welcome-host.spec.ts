@@ -32,6 +32,16 @@ function transport(preference?: string) {
 const url = 'http://127.0.0.1:19387/?token=fixture'
 
 describe('desktop welcome Web operations', () => {
+  it('关闭账号登录后仍能读取和保存 API Key，且不调用账号接口', async () => {
+    const host = transport()
+    const backend = await connectDesktopWelcome(url, host.send, undefined, false)
+    expect((await backend.read()).loggedIn).toBe(false)
+    expect(await backend.save('sk-local-test')).toEqual({ ok: true })
+    expect((await backend.read()).hasApiKey).toBe(true)
+    expect(host.keys.get('CUSTOM_DEEPSEEK_KEY')).toBe('sk-local-test')
+    const methods = host.send.mock.calls.flatMap(([, init]) => typeof init?.body === 'string' ? [(JSON.parse(init.body) as { method: string }).method] : [])
+    expect(methods.some(method => method.startsWith('account/'))).toBe(false)
+  })
   it('authenticates through Web and stores only through the configured credential reference', async () => {
     const host = transport()
     const backend = await connectDesktopWelcome(url, host.send)

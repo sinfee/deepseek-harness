@@ -101,7 +101,7 @@ vi.mock('electron', () => ({
 // The Windows tray relabels through Menu as well; keep the menu call counts below platform-neutral.
 vi.mock('../src/tray.ts', () => ({ DesktopTray: class { relabel() {} dispose() {} } }))
 
-vi.mock('../src/paths.ts', () => ({ resolveDesktopPaths: () => ({ profile: '/profile' }) }))
+vi.mock('../src/paths.ts', async importOriginal => ({ ...await importOriginal<typeof import('../src/paths.ts')>(), resolveDesktopPaths: () => ({ profile: '/profile' }) }))
 vi.mock('../src/settings.ts', () => ({ readDesktopSettings: () => ({ updates: { allowTestAuthPopupWindow: false } }) }))
 vi.mock('../src/login-shell-environment.ts', async importOriginal => ({
   ...await importOriginal<typeof import('../src/login-shell-environment.ts')>(),
@@ -170,6 +170,30 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+it.each(['win32', 'darwin'])('关闭用户登录时直接打开工作区且不订阅账号（%s）', async (platform) => {
+  vi.resetModules()
+  vi.clearAllMocks()
+  vi.useFakeTimers()
+  vi.stubGlobal('process', { ...process, platform })
+  vi.stubEnv('THKAI_DESKTOP_USER_LOGIN', 'false')
+  vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3')
+  vi.stubEnv('DSH_DESKTOP_DSH_DIR', '/runtime/dsh')
+  vi.stubEnv('DSH_DESKTOP_PNPM_ENTRY', '/runtime/pnpm')
+  vi.stubEnv('DSH_DESKTOP_PRIMARY_RUNTIME_DIR', '/runtime/primary-runtime')
+  vi.stubEnv('DSH_DESKTOP_OPEN_DEVTOOLS', '0')
+  vi.stubEnv('DSH_DESKTOP_MANDATORY_UPDATE_CONFIG', undefined)
+  state.operations = undefined
+  state.accountListener = undefined
+  state.expiryListener = undefined
+  state.hasApiKey = false
+  await import('../src/main.ts')
+  await vi.waitFor(() => { expect(state.showWorkspace).toHaveBeenCalledOnce() })
+  expect(state.beforeWelcome).not.toHaveBeenCalled()
+  expect(state.accountListener).toBeUndefined()
+  expect(state.expiryListener).toBeUndefined()
+  expect(state.accountState).not.toHaveBeenCalled()
 })
 
 it.each([false, true])('starts welcome onboarding without carrying update focus into login or skip (Windows update=%s)', async (updated) => {

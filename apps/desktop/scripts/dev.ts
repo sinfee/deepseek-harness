@@ -1,6 +1,7 @@
 /** Build and launch the unpackaged Electron shell against the current workspace. */
 
 import { spawn, execFileSync } from 'node:child_process'
+import { applyThkaiHome } from '@deepseek-ai/dsh-home-paths'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
@@ -14,7 +15,7 @@ import { preparePrimaryRuntime } from './prepare-primary-runtime.ts'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..')
-const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
+const BUILD_ROOT = resolve(process.env.DSH_DESKTOP_BUILD_ROOT ?? join(APP_ROOT, '.desktop-build'))
 const DEVELOPMENT_ROOT = join(BUILD_ROOT, 'development')
 
 interface PackageManifest {
@@ -64,7 +65,8 @@ async function launchElectron(): Promise<void> {
   const rendererPort = debugPort('DSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
   const hostPort = debugPort('DSH_DESKTOP_HOST_INSPECT_PORT', 9230)
   const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
-  const userData = resolve(process.env.DSH_DESKTOP_USER_DATA_DIR ?? join(DEVELOPMENT_ROOT, 'electron-user-data'))
+  const userData = resolve(process.env.DSH_DESKTOP_USER_DATA_DIR ?? (process.env.DSH_DESKTOP_HOME
+    ? join(process.env.DSH_DESKTOP_HOME, 'desktop') : join(DEVELOPMENT_ROOT, 'electron-user-data')))
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
     DSH_HOME: home,
@@ -91,6 +93,7 @@ async function launchElectron(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  applyThkaiHome()
   const { values } = parseArgs({ options: { 'skip-build': { type: 'boolean', default: false } } })
   if (!values['skip-build']) {
     await runPackageScript('build:artifacts', REPOSITORY_ROOT)
