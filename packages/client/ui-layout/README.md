@@ -7,6 +7,8 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+Set `config.keepSidebarRail: true` on the `ui-layout` row to retain the 56px icon rail when a Desktop sidebar closes. Omit it to preserve platform defaults. The sidebar plugin renders the rail's contents.
+
 ## Summary
 
 This package provides the Web GUI's three-column AppFrame, edge-column widths, and `ctx.layout` presentation control. The right column concedes space before the center; its occupant renders fullscreen while the frame retains the wide-screen track underneath. The theme presenter owns color scheme, alias tokens, font sizes, font lists, and document metadata. Layout state resets on reload.

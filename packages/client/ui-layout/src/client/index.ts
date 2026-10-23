@@ -20,6 +20,7 @@ import { LayoutController } from './service.ts'
 import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client'
 import { en, zh } from './shortcut-locales.ts'
 import { ThemePresenter } from './theme-presenter.ts'
+import type { Config } from '../index.ts'
 
 // Contract exports only (export-convergence rule: cross-package consumers
 // keep a symbol exported; test-only/package-internal symbols live off /src).
@@ -154,13 +155,14 @@ export const inject = ['slots', 'theme', 'locale', 'shortcuts']
  * into 'root' with its child-slot declarations, the layout store seat,
  * and the shared root instance supplying commands and the panel-info source.
  * @param ctx - client root context.
+ * @param config - 组合可选择保留收起后的图标侧条；省略时沿用平台行为。
  */
-export function apply(ctx: ClientContext): void {
+export function apply(ctx: ClientContext, config: Config = {}): void {
   ctx.effect(() => ctx.locale.register('shortcuts.layout', { zh, en }), 'layout: command labels')
   const t = ctx.locale.bind('shortcuts.layout')
 
   ctx.effect(() => {
-    const handle = createLayoutStore()
+    const handle = createLayoutStore(config)
     const instance = handle.create()
     const store: typeof handle = { ...handle, create: () => instance }
     const retainMainPanels = (): void => {

@@ -11,6 +11,21 @@
 
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 
+/** 功能插件通过公共入口打开系统设置中的已注册页面。 */
+export interface SettingsNavigation {
+  /** 打开指定页面；页面未注册时抛错，不改变当前设置视图。
+   * @param id - 已注册 settings.section 的页面 ID。
+   */
+  openSection(id: string): void
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** 由设置窗口持有的页面导航入口，随窗口宿主卸载而释放。 */
+    settingsNavigation: SettingsNavigation
+  }
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /** Optional sidebar account launcher; opens the shell-owned settings panel. */

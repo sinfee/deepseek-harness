@@ -180,6 +180,12 @@ export function apply(ctx: ClientContext): void {
     const shellHandle = createSettingsShellStore()
     const shellInstance = shellHandle.create()
     const shellStore: typeof shellHandle = { ...shellHandle, create: () => shellInstance }
+    const disposeNavigation = ctx.reflect.provide('settingsNavigation', {
+      openSection(id: string) {
+        if (!ctx.slots.entries('settings.section').some(entry => entry.options.id === id)) throw new Error('设置页面未注册：' + id)
+        shellInstance.actions.openSection(id)
+      },
+    })
     const disposeCommand = ctx.shortcuts.register({
       id: 'settings.open' as ShortcutCommandId, label: () => t('shortcut.open'), aliases: ['settings', 'preferences'],
       defaults: {
@@ -214,7 +220,7 @@ export function apply(ctx: ClientContext): void {
       },
       inject: shellInjected,
     }, SettingsRoot)
-    return () => { disposeCommand(); disposeSlot() }
+    return () => { disposeCommand(); disposeSlot(); void disposeNavigation() }
   })
 
   ctx.slots.inject('settings.trigger', () =>
