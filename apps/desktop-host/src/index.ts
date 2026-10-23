@@ -94,6 +94,7 @@ async function main(): Promise<void> {
   control.quitInspection = installDesktopQuitInspection(ctx)
   await ctx.plugin(desktopOffice, {
     runtimeDir,
+    bundledDependencies: process.env.DSH_DESKTOP_EXTERNAL_PYTHON !== '1',
     source: process.argv[4] ?? join(runtimeDir, '..', 'runtime', 'primary-runtime'),
     root: join(resolveDshHome(), 'dsh-runtimes', 'dsh-primary-runtime'),
   })
