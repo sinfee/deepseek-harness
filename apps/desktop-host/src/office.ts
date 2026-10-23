@@ -18,6 +18,8 @@ export interface Config {
   readonly root: string
   /** Prepared or ASAR-contained application dependency directory. */
   readonly runtimeDir: string
+  /** 为 false 时由外部插件提供依赖查询；省略时加载随包依赖。 */
+  readonly bundledDependencies?: boolean
 }
 
 /**
@@ -26,7 +28,7 @@ export interface Config {
  * @param config - Bundled payload source and Harness-home installation root.
  */
 export async function apply(ctx: Context, config: Config): Promise<void> {
-  await ctx.plugin(workspaceDependencies, config)
+  if (config.bundledDependencies !== false) await ctx.plugin(workspaceDependencies, config)
   const archive = runtimeArchivePath(config.runtimeDir) === undefined ? undefined : dirname(realpathSync(config.runtimeDir))
   const manifest = fileURLToPath(import.meta.resolve('@deepseek-ai/libreoffice-kit/package.json'))
   const packageRoot = dirname(archive === undefined ? manifest : join(`${archive}.unpacked`, relative(archive, manifest)))

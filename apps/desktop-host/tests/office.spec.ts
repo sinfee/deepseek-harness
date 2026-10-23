@@ -13,7 +13,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { expect, it, vi } from 'vitest'
 import * as desktopOffice from '../src/office.ts'
 
-it('loads Desktop Office CLI paths and removes them on disposal', async () => {
+it.each([true, false])('loads Office skills with bundled dependencies %s and removes them on disposal', async (bundledDependencies) => {
   const root = await mkdtemp(join(tmpdir(), 'desktop-office-'))
   vi.stubEnv('DSH_HOME', root)
   const ctx = new Context()
@@ -46,6 +46,7 @@ it('loads Desktop Office CLI paths and removes them on disposal', async () => {
       '  config:', `    source: ${JSON.stringify(join(root, 'runtime', 'primary-runtime'))}`,
       `    root: ${JSON.stringify(join(root, 'installed'))}`,
       `    runtimeDir: ${JSON.stringify(join(root, 'dsh'))}`, '',
+      `    bundledDependencies: ${String(bundledDependencies)}`, '',
     ].join('\n'))
     await ctx.loader.create({ name: 'cordis:include', config: { path: pathToFileURL(config).href } })
     await ctx.loader.await()
@@ -54,7 +55,7 @@ it('loads Desktop Office CLI paths and removes them on disposal', async () => {
     expect((await ctx.skills.get('office-pptx'))?.resourceBase).toEqual({ kind: 'directory', path: join(assets, 'office-pptx').split(sep).join('/') })
     expect((await ctx.skills.get('office-pptx'))?.content).toContain('office-render')
     expect((await ctx.skills.get('office-pptx'))?.content).not.toContain(nodeDirectory)
-    expect(ctx.tools.schemas().map(tool => tool.name)).toEqual(['load_workspace_dependencies'])
+    expect(ctx.tools.schemas().map(tool => tool.name)).toEqual(bundledDependencies ? ['load_workspace_dependencies'] : [])
     const entry = [...ctx.loader.entries()].find(entry => entry.options.name === 'office')
     expect(entry).toBeDefined()
     await entry?.fiber?.dispose()
