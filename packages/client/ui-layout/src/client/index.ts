@@ -21,6 +21,7 @@ import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client
 import { en, ja, es, fr, de, ru, pt, zh } from './shortcut-locales.ts'
 import { ThemePresenter } from './theme-presenter.ts'
 import type { Config } from '../index.ts'
+import { LAYOUT_CONFIG_GLOBAL } from '../page-config.ts'
 
 // Contract exports only (export-convergence rule: cross-package consumers
 // keep a symbol exported; test-only/package-internal symbols live off /src).
@@ -157,12 +158,14 @@ export const inject = ['slots', 'theme', 'locale', 'shortcuts']
  * @param ctx - client root context.
  * @param config - 组合可选择保留收起后的图标侧条；省略时沿用平台行为。
  */
-export function apply(ctx: ClientContext, config: Config = {}): void {
+export function apply(ctx: ClientContext, config?: Config): void {
+  const page = globalThis as Partial<Record<typeof LAYOUT_CONFIG_GLOBAL, Config>>
+  const options = config ?? page[LAYOUT_CONFIG_GLOBAL] ?? {}
   ctx.effect(() => ctx.locale.register('shortcuts.layout', { zh, en, ja, es, fr, de, ru, pt }), 'layout: command labels')
   const t = ctx.locale.bind('shortcuts.layout')
 
   ctx.effect(() => {
-    const handle = createLayoutStore(config)
+    const handle = createLayoutStore(options)
     const instance = handle.create()
     const store: typeof handle = { ...handle, create: () => instance }
     const retainMainPanels = (): void => {

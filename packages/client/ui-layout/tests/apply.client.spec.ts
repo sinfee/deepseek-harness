@@ -13,6 +13,8 @@ import { apply, inject, LayoutController } from '@deepseek-ai/dsh-client-ui-layo
 import { apply as nodeApply } from '@deepseek-ai/dsh-client-ui-layout'
 import type { MainPanelId } from '../src/client/service.ts'
 import type { createLayoutStore } from '../src/client/stores.ts'
+import { LAYOUT_CONFIG_GLOBAL } from '../src/page-config.ts'
+import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
 
 const owners = new Set<Fiber>()
 let originalRootStyle: string | null
@@ -75,6 +77,15 @@ async function bench() {
 }
 
 describe('ui-layout client apply', () => {
+  it('采用宿主页面初始化传递的侧条选项', async () => {
+    vi.stubGlobal(LAYOUT_CONFIG_GLOBAL, { keepSidebarRail: true })
+    try {
+      const { ctx, slots } = await bench()
+      await ctx.plugin({ inject: [...inject], apply }).await()
+      const handle = slots.entries('root')[0]!.store as ReturnType<typeof createLayoutStore>
+      expect(handle.create().getSnapshot().layoutInfo.keepSidebarRail).toBe(true)
+    } finally { vi.unstubAllGlobals() }
+  })
   it('declares its service dependencies', () => {
     expect(inject).toEqual(['slots', 'theme', 'locale', 'shortcuts'])
   })
@@ -171,8 +182,16 @@ describe('ui-layout client apply', () => {
 })
 
 describe('node half', () => {
-  it('node apply is an intentional no-op (loader-managed lifecycle only)', () => {
-    nodeApply()
-    expect(true).toBe(true) // reaching here without throw is the contract
+  it('宿主通过初始化表向客户端传递布局选项', async () => {
+    const ctx = new Context()
+    const fiber = ctx.plugin((child) => { nodeApply(child, { keepSidebarRail: true }) })
+    await fiber.await()
+    const table: IndexInjection[] = []
+    ctx.emit('webserver/index-inject', table)
+    expect(table).toEqual([{ kind: 'global', name: LAYOUT_CONFIG_GLOBAL, value: { keepSidebarRail: true } }])
+    await fiber.dispose()
+    const disposed: IndexInjection[] = []
+    ctx.emit('webserver/index-inject', disposed)
+    expect(disposed).toEqual([])
   })
 })
