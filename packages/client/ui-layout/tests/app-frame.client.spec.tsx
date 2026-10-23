@@ -60,9 +60,9 @@ function resize(width: number): void {
   })
 }
 
-function mountFrame(windowWidth = frameWidth) {
+function mountFrame(windowWidth = frameWidth, keepSidebarRail = false) {
   vi.stubGlobal('innerWidth', windowWidth)
-  const instance = createLayoutStore().create()
+  const instance = createLayoutStore({ keepSidebarRail }).create()
   const slotCalls: { key: string; props: object; options: RenderOpts | undefined }[] = []
   const renderSlot: AppFrameProps['renderSlot'] = (key, owner, options) => {
     slotCalls.push({ key, props: owner, options })
@@ -241,6 +241,17 @@ describe('AppFrame', () => {
     } finally {
       document.documentElement.removeAttribute('data-windows-titlebar')
     }
+  })
+
+  it('允许定制组合在 Windows 收起后保留图标侧条', () => {
+    document.documentElement.setAttribute('data-windows-titlebar', '')
+    try {
+      const { frame, instance, sidebarOwner } = mountFrame(frameWidth, true)
+      act(() => { instance.actions.toggleSidebar() })
+      expect(tracks(frame)[0]).toBe(56)
+      expect(sidebarOwner()).toEqual({ collapsed: true, width: 56 })
+      expect(frame.hasAttribute('data-sidebar-rail')).toBe(true)
+    } finally { document.documentElement.removeAttribute('data-windows-titlebar') }
   })
 
   it('keeps the closed sidebar mounted at its 56px rail without a handle', () => {

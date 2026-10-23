@@ -19,6 +19,7 @@ import { HostReleasePrompt, type HostReleasePromptInjected } from '../src/client
 import { CloseLabel, HeaderContent, TriggerContent } from '../src/client/chrome.tsx'
 import { GeneralSection } from '../src/client/GeneralSection.tsx'
 import { SettingsDocumentAction } from '../src/client/SettingsDocumentAction.tsx'
+import type { createSettingsShellStore } from '../src/client/shell-store.ts'
 import type { SettingsDocumentActionInjected } from '../src/client/SettingsDocumentAction.tsx'
 
 const SELF = '@deepseek-ai/dsh-client-ui-settings-general'
@@ -95,6 +96,20 @@ function setPageUrl(url: string): void {
 }
 
 describe('ui-settings-general apply', () => {
+  it('公开页面导航使用同一个设置状态，拒绝失效页面并随宿主卸载释放', async ({ mock, start }) => {
+    const { c } = await client(mock, start)
+    const entry = c.ctx.slots.entries('sidebar.settings')[0]!
+    const handle = entry.store as ReturnType<typeof createSettingsShellStore>
+    const instance = handle.create()
+    c.ctx.settingsNavigation.openSection('general')
+    expect(instance.getSnapshot()).toEqual({ open: true, activeId: 'general' })
+    const before = instance.getSnapshot()
+    expect(() => { c.ctx.settingsNavigation.openSection('missing-page') }).toThrow('设置页面未注册')
+    expect(instance.getSnapshot()).toBe(before)
+    await c.unload(SELF)
+    await c.flush()
+    expect(c.ctx.get('settingsNavigation')).toBeUndefined()
+  }, COLD_BOOT_TIMEOUT_MS)
   it('declares the services it uses', () => {
     expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'remote.settings', 'configForms', 'shortcuts', 'modules'])
   })
