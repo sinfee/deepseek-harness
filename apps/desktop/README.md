@@ -8,6 +8,8 @@ Custom desktop entries can set `DSH_DESKTOP_PRODUCT_NAME` to use the same brand 
 
 English | [中文](README.zh.md)
 
+Custom distributions can set `DSH_DESKTOP_ENVIRONMENT_BOOTSTRAP` to a trusted local module exporting `prepareStartup()`. The primary process awaits it after claiming the single instance and before reading login policy or starting update scheduling; failure stops startup. `prepareProfile()` from `DSH_DESKTOP_PROFILE_BOOTSTRAP` separately assembles the profile. A custom update provider can handle explicit extension IPC through `handleHostMessage(child, message)`; unrecognized messages retain official protocol validation.
+
 ## Summary
 
 Desktop runs the Harness workspace in a native application. This reference covers application behavior, development and integration; the packaging, Windows signing and publication guides own build and release operations.

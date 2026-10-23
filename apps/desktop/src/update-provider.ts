@@ -1,10 +1,14 @@
 /** 主进程更新提供者接入；未配置时完整沿用官方更新器。 */
 import { isAbsolute } from 'node:path'
+import type { ChildProcess } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
 
 /** 桌面状态组件和更新调度所需的操作。 */
-export type DesktopUpdateProvider = Pick<DesktopUpdateCoordinator, 'state' | 'check' | 'download' | 'install' | 'dispose'>
+export type DesktopUpdateProvider = Pick<DesktopUpdateCoordinator, 'state' | 'check' | 'download' | 'install' | 'dispose'> & {
+  /** 处理已绑定宿主的扩展消息；未识别时返回 false，交回官方协议校验。 */
+  handleHostMessage?: (child: ChildProcess, message: unknown) => boolean
+}
 
 /**
  * 从显式配置的本地模块加载更新提供者。
@@ -38,5 +42,6 @@ export async function createDesktopUpdateProvider(
     || !('download' in provider) || typeof provider.download !== 'function'
     || !('install' in provider) || typeof provider.install !== 'function'
     || !('dispose' in provider) || typeof provider.dispose !== 'function') throw new Error('桌面更新模块操作不完整')
+  if ('handleHostMessage' in provider && typeof provider.handleHostMessage !== 'function') throw new Error('桌面扩展消息处理器无效')
   return provider as DesktopUpdateProvider
 }
