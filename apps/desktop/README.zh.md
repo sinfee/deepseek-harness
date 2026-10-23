@@ -8,6 +8,8 @@ description: "Desktop 在原生应用中运行 Harness 工作区。本参考文�
 
 [English](README.md) | 中文
 
+定制发行入口可设置 `DSH_DESKTOP_ENVIRONMENT_BOOTSTRAP`，指向导出 `prepareStartup()` 的可信本地模块。主进程在取得单实例所有权后、读取登录策略和启动更新调度前等待该模块；失败会阻止后续启动。`DSH_DESKTOP_PROFILE_BOOTSTRAP` 的 `prepareProfile()` 负责独立的 profile 装配。定制更新提供者可通过 `handleHostMessage(child, message)` 处理显式扩展 IPC，未识别的消息仍由官方协议校验。
+
 ## 概述
 
 Desktop 在原生应用中运行 Harness 工作区。本参考文档说明应用行为、开发与集成；打包、Windows 签名和发布指南分别维护构建与发布操作。

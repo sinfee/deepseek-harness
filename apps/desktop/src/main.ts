@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mkdirSync } from 'node:fs'
 import { applyThkaiHome } from '@deepseek-ai/dsh-home-paths'
-import { prepareDesktopProfile } from './profile-bootstrap.ts'
+import { prepareDesktopProfile, prepareDesktopEnvironment } from './profile-bootstrap.ts'
 import {
   app,
   BrowserWindow,
@@ -93,7 +93,6 @@ applyThkaiHome()
 if (process.env.THKAI_DESKTOP_USER_LOGIN !== undefined && !['true', 'false'].includes(process.env.THKAI_DESKTOP_USER_LOGIN)) {
   throw new Error('THKAI_DESKTOP_USER_LOGIN 必须为 true 或 false')
 }
-const userLogin = process.env.THKAI_DESKTOP_USER_LOGIN !== 'false'
 const userData = resolveDesktopUserData()
 if (userData !== undefined) {
   mkdirSync(userData, { recursive: true })
@@ -385,6 +384,8 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
 }
 
 async function main(): Promise<void> {
+  await prepareDesktopEnvironment(process.env.DSH_DESKTOP_ENVIRONMENT_BOOTSTRAP)
+  const userLogin = process.env.THKAI_DESKTOP_USER_LOGIN !== 'false'
   const desktopSettings = readDesktopSettings(app.getPath('userData'))
   void pruneCrashReports(app.getPath('logs'))
   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
@@ -539,7 +540,9 @@ async function main(): Promise<void> {
     const host = new DesktopHostProcess(resources.node, resources.dsh, activeProject,
       hostInspectPort, { ...hostEnvironment, DSH_CLIENT_VERSION: desktopClientVersion() }, onFailure,
       primaryRuntime,
-      resources, (next) => { platformView.setSession(next) }, (record) => {
+      resources, (next) => { platformView.setSession(next) },
+      (child, message) => updates.handleHostMessage?.(child, message) ?? false,
+      (record) => {
         operationJournal ??= new OperationJournal(join(app.getPath('userData'), 'plugin-operations'), {
           segmentBytes: 256 * 1024, recordBytes: 4096, queuedBytes: 64 * 1024,
         })
