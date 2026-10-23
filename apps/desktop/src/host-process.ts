@@ -23,15 +23,7 @@ interface PlatformSessionEvent {
   readonly session: PlatformSession | null
 }
 
-/** Host 请求桌面安装已暂存的插件更新并重新启动。 */
-export interface PluginUpdateRestartEvent {
-  readonly type: 'plugin-update-restart'
-  readonly version: string
-  readonly staging: string
-  readonly resources: string
-}
-
-type DesktopHostEvent = ReadyEvent | FatalEvent | PlatformSessionEvent | PluginUpdateRestartEvent | { readonly type: 'shutdown-complete' } | {
+type DesktopHostEvent = ReadyEvent | FatalEvent | PlatformSessionEvent | { readonly type: 'shutdown-complete' } | {
   readonly type: 'update-tasks'
   readonly requestId: number
   readonly active: boolean
@@ -93,9 +85,6 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
     case 'quit-inspection':
       return Number.isSafeInteger(candidate.requestId) && typeof candidate.activeTasks === 'boolean'
         && typeof candidate.scheduledTasks === 'boolean' && (candidate.error === undefined || typeof candidate.error === 'string')
-    case 'plugin-update-restart':
-      return typeof candidate.version === 'string' && typeof candidate.staging === 'string'
-        && typeof candidate.resources === 'string'
     default:
       return false
   }
@@ -188,7 +177,6 @@ export class DesktopHostProcess {
     private readonly packageManager?: { readonly pnpm: string; readonly nodeBin: string },
 
     private readonly onPlatformSession?: (session: PlatformSession | null) => void,
-    private readonly onPluginUpdateRestart?: (event: PluginUpdateRestartEvent) => void,
   ) {}
 
   /**
@@ -228,7 +216,6 @@ export class DesktopHostProcess {
         else this.fail(new Error('dsh desktop host acknowledged an unrequested shutdown'))
       }
       else if (message.type === 'fatal') this.fail(new DesktopHostFatalError(message.message, message.diagnostic))
-      else if (message.type === 'plugin-update-restart') this.onPluginUpdateRestart?.(message)
       else {
         const request = this.controlRequests.get(message.requestId)
         if (message.error === undefined) request?.resolve(message)

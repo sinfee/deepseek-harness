@@ -3,9 +3,6 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
 import { readFile, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
-import { spawn } from 'node:child_process'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -27,7 +24,7 @@ import {
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager } from './project-manager.ts'
-import { DesktopHostFatalError, DesktopHostProcess, DesktopHostUncleanExitError, type PluginUpdateRestartEvent } from './host-process.ts'
+import { DesktopHostFatalError, DesktopHostProcess, DesktopHostUncleanExitError } from './host-process.ts'
 import { DesktopPlatformView, PLATFORM_IPC, platformBounds } from './platform-view.ts'
 import { installDesktopDirectoryPicker } from './directory-picker.ts'
 import { installMicrophonePermissions } from './microphone-permissions.ts'
@@ -445,45 +442,12 @@ async function main(): Promise<void> {
   }
   const platformView = new DesktopPlatformView(join(app.getAppPath(), 'lib', 'preload-platform-account.cjs'),
     () => locale.id === 'zh-CN' ? 'zh_CN' : 'en_US', process.platform === 'win32' ? 'win32' : 'darwin')
-  /** 插件更新：spawn 一个等待本进程退出的 helper，由它安装 pending 并重新启动。 */
-  const requestPluginUpdateRestart = (event: PluginUpdateRestartEvent): void => {
-    try {
-      if (event.resources !== process.resourcesPath) {
-        console.error('[plugin-update] 拒绝非当前 resources 的更新重启请求')
-        return
-      }
-      const home = process.env.THKAI_HOME || join(homedir(), '.thkai3d')
-      if (!existsSync(join(home, 'thkai3d', 'updates', 'pending.json'))) {
-        console.error('[plugin-update] 没有 pending.json，忽略重启请求')
-        return
-      }
-      const helper = join(app.getAppPath(), 'lib', 'plugin_update_bootstrap.mjs')
-      if (!existsSync(helper)) {
-        console.error('[plugin-update] 缺少 plugin_update_bootstrap.mjs')
-        return
-      }
-      const child = spawn(resources.node, [
-        helper,
-        '--wait-pid', String(process.pid),
-        '--home', home,
-        '--resources', process.resourcesPath,
-        '--relaunch', process.execPath,
-      ], { detached: true, stdio: 'ignore', windowsHide: true, env: process.env })
-      child.once('error', (error) => { console.error('[plugin-update] 无法启动更新重启 helper', error) })
-      child.once('spawn', () => {
-        child.unref()
-        quitWithoutConfirmation()
-      })
-    } catch (error) {
-      console.error('[plugin-update] 无法启动更新重启 helper', error)
-    }
-  }
   const backend = new DesktopBackendController((onFailure) => {
     const hostInspectPort = developmentHostInspectPort(development)
     const host = new DesktopHostProcess(resources.node, resources.dsh, activeProject,
       hostInspectPort, { ...hostEnvironment, DSH_CLIENT_VERSION: desktopClientVersion() }, onFailure,
       primaryRuntime,
-      resources, (next) => { platformView.setSession(next) }, requestPluginUpdateRestart)
+      resources, (next) => { platformView.setSession(next) })
     return {
       start: async () => {
         const ready = await host.start()
