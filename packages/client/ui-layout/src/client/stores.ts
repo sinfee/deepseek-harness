@@ -4,6 +4,7 @@
  */
 import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
 import type { MainPanelId } from './service.ts'
+import type { Config } from '../index.ts'
 import {
   clampWidth, RIGHTBAR_DEFAULT_RATIO, RIGHTBAR_MAX_RATIO, RIGHTBAR_MIN,
   SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
@@ -22,6 +23,7 @@ type LayoutState = {
 }
 
 type LayoutInfo = {
+  keepSidebarRail: boolean
   sidebar: number
   /** Last positive frame measurement; window width bootstraps the first render. */
   viewportWidth: number
@@ -74,12 +76,14 @@ type LayoutActions = {
  * the current frame's range. Narrow sidebar toggles change only the expansion
  * override; opening the right panel clears that override.
  * @returns the store handle (spec + type + identity + factory in one).
+ * @param config - 组合布局选项；省略时不覆盖桌面的侧栏行为。
  */
-export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
+export function createLayoutStore(config: Config = {}): EngineStoreHandle<LayoutState, LayoutActions>  {
   const handle = defineStore({
     init: (): LayoutState => ({
       panelInfo: { activePanelId: null },
       layoutInfo: {
+        keepSidebarRail: config.keepSidebarRail === true,
         sidebar: SIDEBAR_DEFAULT,
         viewportWidth: window.innerWidth,
         narrowExpanded: false,

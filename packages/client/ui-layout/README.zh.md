@@ -7,6 +7,8 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
+在 `ui-layout` 配置行设置 `config.keepSidebarRail: true`，桌面侧栏收起时保留 56px 图标侧条；省略时沿用平台默认行为。侧条的内容仍由侧栏插件绘制。
+
 ## 概述
 
 本包提供 Web GUI 的三栏 AppFrame、左右栏宽度与 `ctx.layout` 呈现控制。右栏先让步以保护中栏空间，全屏由占用方呈现，框架保留宽屏底层轨道。主题呈现器负责配色、别名 token、字号、字体列表与 document 元数据；布局状态在刷新后重置。
