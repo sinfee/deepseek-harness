@@ -18,7 +18,7 @@ import { AppFrame } from './AppFrame.tsx'
 import { createLayoutStore } from './stores.ts'
 import { LayoutController } from './service.ts'
 import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client'
-import { en, zh } from './shortcut-locales.ts'
+import { en, ja, es, fr, de, ru, pt, zh } from './shortcut-locales.ts'
 import { ThemePresenter } from './theme-presenter.ts'
 import type { Config } from '../index.ts'
 import { LAYOUT_CONFIG_GLOBAL } from '../page-config.ts'
@@ -161,7 +161,7 @@ export const inject = ['slots', 'theme', 'locale', 'shortcuts']
 export function apply(ctx: ClientContext, config?: Config): void {
   const page = globalThis as Partial<Record<typeof LAYOUT_CONFIG_GLOBAL, Config>>
   const options = config ?? page[LAYOUT_CONFIG_GLOBAL] ?? {}
-  ctx.effect(() => ctx.locale.register('shortcuts.layout', { zh, en }), 'layout: command labels')
+  ctx.effect(() => ctx.locale.register('shortcuts.layout', { zh, en, ja, es, fr, de, ru, pt }), 'layout: command labels')
   const t = ctx.locale.bind('shortcuts.layout')
 
   ctx.effect(() => {

@@ -1,6 +1,6 @@
-/** Resolve build-owned Desktop paths without sharing mutable state across release targets. */
+/** Resolve target-owned Desktop outputs and shared package caches. */
 
-import { join, resolve } from 'node:path'
+import { isAbsolute, join, resolve } from 'node:path'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
@@ -38,12 +38,16 @@ function assertSupportedTarget(target) {
 /**
  * Return the mutable preparation and artifact directories owned by one release target.
  * @param {'mac-arm64' | 'mac-x64' | 'win-x64'} target - Supported Desktop target name.
- * @param {NodeJS.ProcessEnv} env - 可覆盖构建根目录的环境。
- * @returns {{ root: string, artifacts: string, unsignedArtifacts: string, unnotarizedArtifacts: string, runtime: string, packageSet: string, dsh: string, dshPnpm: string, electron: string, packedDsh: string, packedVendor: string, packedLandlock: string, downloads: string }} Target paths plus the shared immutable download cache.
+ * @param {NodeJS.ProcessEnv} environment - 可覆盖构建根目录的环境，或带有可选绝对缓存目录的打包环境。
+ * @returns {{ root: string, artifacts: string, unsignedArtifacts: string, unnotarizedArtifacts: string, runtime: string, packageSet: string, dsh: string, dshPnpm: string, electron: string, packedDsh: string, packedVendor: string, packedLandlock: string, downloads: string, pnpmStore: string }} Target paths plus shared download and package caches.
  */
-export function desktopTargetBuildPaths(target, env = process.env) {
+export function desktopTargetBuildPaths(target, environment = process.env) {
   assertSupportedTarget(target)
-  const buildRoot = env.DSH_DESKTOP_BUILD_ROOT === undefined ? BUILD_ROOT : resolve(env.DSH_DESKTOP_BUILD_ROOT)
+  const buildRoot = environment.DSH_DESKTOP_BUILD_ROOT === undefined ? BUILD_ROOT : resolve(environment.DSH_DESKTOP_BUILD_ROOT)
+  const cacheRoot = environment.DSH_DESKTOP_PACKAGE_CACHE_DIR ?? buildRoot
+  if (!cacheRoot.trim() || !isAbsolute(cacheRoot) || cacheRoot.includes('\0')) {
+    throw new Error('desktop package: DSH_DESKTOP_PACKAGE_CACHE_DIR must be a nonempty absolute directory')
+  }
   const root = join(buildRoot, 'targets', target)
   const packed = join(root, 'packed')
   return {
@@ -59,7 +63,8 @@ export function desktopTargetBuildPaths(target, env = process.env) {
     packedDsh: join(packed, 'dsh'),
     packedVendor: join(packed, 'vendor'),
     packedLandlock: join(packed, 'landlock'),
-    downloads: resolve(env.DSH_DESKTOP_DOWNLOADS_ROOT ?? join(buildRoot, 'downloads')),
+    downloads: resolve(environment.DSH_DESKTOP_DOWNLOADS_ROOT ?? join(cacheRoot, 'downloads')),
+    pnpmStore: join(cacheRoot, 'pnpm-store'),
   }
 }
 
