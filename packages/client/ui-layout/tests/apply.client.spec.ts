@@ -14,7 +14,10 @@ import { apply as nodeApply } from '@deepseek-ai/dsh-client-ui-layout'
 import type { MainPanelId } from '../src/client/service.ts'
 import type { createLayoutStore } from '../src/client/stores.ts'
 import { LAYOUT_CONFIG_GLOBAL } from '../src/page-config.ts'
-import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
+import type { IndexInjection, WebServer } from '@deepseek-ai/dsh-host-webserver'
+
+/** The Peer an index render speaks for; this listener reads no field of it. */
+const PAGE_PEER = { principal: { kind: 'owner' } } as Parameters<WebServer['renderIndex']>[1]
 
 const owners = new Set<Fiber>()
 let originalRootStyle: string | null
@@ -187,11 +190,11 @@ describe('node half', () => {
     const fiber = ctx.plugin((child) => { nodeApply(child, { keepSidebarRail: true }) })
     await fiber.await()
     const table: IndexInjection[] = []
-    ctx.emit('webserver/index-inject', table)
+    ctx.emit('webserver/index-inject', table, PAGE_PEER)
     expect(table).toEqual([{ kind: 'global', name: LAYOUT_CONFIG_GLOBAL, value: { keepSidebarRail: true } }])
     await fiber.dispose()
     const disposed: IndexInjection[] = []
-    ctx.emit('webserver/index-inject', disposed)
+    ctx.emit('webserver/index-inject', disposed, PAGE_PEER)
     expect(disposed).toEqual([])
   })
 })
