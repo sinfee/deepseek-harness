@@ -211,25 +211,6 @@ function clientExportOf(pkgName: string, exportsField: unknown): string | undefi
   throw new Error(`client-modules: ${pkgName} exports["./client"] must be a string or an object with a string default`)
 }
 
-/** 优先解析零链接发布代理记录的真实浏览器入口。 */
-function physicalClientTargetOf(pkgName: string, dshField: unknown): string | undefined {
-  if (typeof dshField !== 'object' || dshField === null) return undefined
-  const moduleFallback = (dshField as Record<string, unknown>).moduleFallback
-  if (typeof moduleFallback !== 'object' || moduleFallback === null) return undefined
-  const targets = (moduleFallback as Record<string, unknown>).targets
-  if (typeof targets !== 'object' || targets === null) return undefined
-  const target = (targets as Record<string, unknown>)['./client']
-  if (target === undefined) return undefined
-  if (typeof target !== 'string') {
-    throw new Error(`client-modules: ${pkgName} dsh.moduleFallback.targets["./client"] must be a file URL`)
-  }
-  try {
-    return fileURLToPath(target)
-  } catch {
-    throw new Error(`client-modules: ${pkgName} dsh.moduleFallback.targets["./client"] must be a file URL`)
-  }
-}
-
 /** sha1 metadata hash shortened to 12 hex chars. */
 function shortHash(input: string): string {
   return createHash('sha1').update(input).digest('hex').slice(0, HASH_REVISION_LENGTH)
@@ -920,14 +901,12 @@ export class ClientModuleRegistry extends Service {
       dsh !== null && typeof dsh === 'object' ? (dsh as Record<string, unknown>).client : undefined,
     )
     if (decl === undefined || decl.platform !== 'web') return null
-    // 发布代理的 exports 指向 ESM 转发桩；Web 组合路由必须读取真实 client.js。
-    const physicalClientPath = physicalClientTargetOf(packageName, dsh)
-    const clientRel = physicalClientPath === undefined ? clientExportOf(packageName, pkg.exports) : undefined
-    if (physicalClientPath === undefined && clientRel === undefined) {
+    const clientRel = clientExportOf(packageName, pkg.exports)
+    if (clientRel === undefined) {
       throw new Error(`client-modules: ${packageName} declares dsh.client but exports no "./client" bundle`)
     }
     const meta: PkgMeta = {
-      clientPath: physicalClientPath ?? join(dirname(pkgPath), clientRel!),
+      clientPath: join(dirname(pkgPath), clientRel),
       manifestPath: pkgPath,
       ...(decl.inject !== undefined ? { inject: decl.inject } : {}),
       external: decl.external ?? [],

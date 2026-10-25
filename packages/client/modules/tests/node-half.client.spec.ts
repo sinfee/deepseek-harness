@@ -375,38 +375,6 @@ describe('client bundle activation', () => {
     expect(service.graph().entries.map(entry => entry.id)).toEqual([packageName])
   })
 
-  it('serves the physical client bundle behind a zero-link release proxy', async () => {
-    const packageName = '@fixture/physical-proxy'
-    const proxyClientPath = writePackage(packageName)
-    const packageRoot = dirname(dirname(proxyClientPath))
-    const physicalClientPath = join(root!, 'physical', 'client.js')
-    const physicalSource = 'window.__physicalProxyClient = true\n'
-    mkdirSync(dirname(proxyClientPath), { recursive: true })
-    mkdirSync(dirname(physicalClientPath), { recursive: true })
-    writeFileSync(proxyClientPath, 'export * from "file:///invalid-proxy-target.js"\n')
-    writeFileSync(physicalClientPath, physicalSource)
-    writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
-      name: packageName,
-      exports: {
-        './client': './lib/client.js',
-        './package.json': './package.json',
-      },
-      dsh: {
-        client: { platform: 'web' },
-        moduleFallback: {
-          targets: { './client': pathToFileURL(physicalClientPath).href },
-        },
-      },
-    }))
-
-    const { service, route } = constructWithRoute([packageName])
-    expect(service.clientPath(packageName)).toBe(physicalClientPath)
-    const response = await routeRequest(route, service.graph().batches[0]!.url)
-    expect(response.status).toBe(200)
-    expect(response.body.toString()).toContain(physicalSource.trim())
-    expect(response.body.toString()).not.toContain('invalid-proxy-target')
-  })
-
   it.each(['relative', 'absolute'] as const)(
     'finds the owning manifest through the %s-path fallback without Node loader internals',
     (kind) => {
