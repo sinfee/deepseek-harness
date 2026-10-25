@@ -68,6 +68,8 @@ The existing semantic `DraftSnapshot` retains quote text and clipboard-coordinat
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
 
+`conversation.hero.brand.badge` is a root-scoped single slot for the badge beside the blank-session headline. The shell retains the badge styling and shows the localized preview label when no plugin contributes. Plugins supply badge content through the slot; brand configuration remains owned by the plugin.
+
 The shared image slot props keep display choices separate from durable references: `thumbnail` requests a contained attachment-list thumbnail, while `compact` requests a cropped gallery tile. An optional per-image `label` supplies the accessible display name; loading and cache identity still use the original attachment reference. `MessageImagesContentInput` adds optional complete `MessageImageLabels` for the root-scoped `conversation.images.content` Factory. Message, tool, and Factory inputs carry the view's authorized `loadImage` callback explicitly; loading and URL caching remain with the resource owner. [ui-attachment](../ui-attachment/README.md) provides this Factory and owns rendering and the lightbox.
 
 The composer uses a minimum 16px draft font on coarse-pointer devices to avoid focus-triggered browser zoom; larger font preferences still apply.

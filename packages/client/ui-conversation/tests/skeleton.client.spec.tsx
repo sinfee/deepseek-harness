@@ -204,6 +204,7 @@ function mount(
   const setPinned = vi.fn<(id: string, pinned: boolean) => void>()
   const renderSlot = ((key: string, owner: object, opts?: { only?: string; fallback?: ReactNode }) => {
     slotCalls.push(key)
+    if (key === 'conversation.hero.brand.badge') return opts?.fallback ?? null
     if (key === 'conversation.input.model' || key === 'conversation.input.plan') {
       seatOwners.push({ key, owner })
     }
@@ -408,12 +409,28 @@ function mount(
 }
 
 describe('Hero chrome', () => {
+  it('通过品牌徽标插槽替换默认文字，并在移除贡献后恢复中文默认值', () => {
+    let custom = true
+    const renderSlot = vi.fn<HeroShellProps['renderSlot']>((name, _owner, options) => (
+      name === 'conversation.hero.brand.badge' && custom ? '航天版' : options?.fallback ?? null
+    ))
+    const props = { t: makeTranslate(zh, commonZh), renderSlot }
+    const view = render(<HeroShell {...props} />)
+    expect(view.getByText('航天版')).toBeTruthy()
+    expect(view.queryByText('预览版')).toBeNull()
+    custom = false
+    view.rerender(<HeroShell {...props} />)
+    expect(view.getByText('预览版')).toBeTruthy()
+    expect(view.queryByText('航天版')).toBeNull()
+  })
+
   it('renders the English preview badge through the hero locale seat', () => {
-    const renderSlot = vi.fn<HeroShellProps['renderSlot']>(() => null)
+    const renderSlot = vi.fn<HeroShellProps['renderSlot']>((_name, _owner, options) => options?.fallback ?? null)
     const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot} />)
     expect(view.getByText('Into the Unknown')).toBeTruthy()
     expect(view.getByText('Preview')).toBeTruthy()
-    expect(renderSlot).toHaveBeenCalledOnce()
+    expect(renderSlot).toHaveBeenCalledTimes(2)
+    expect(renderSlot.mock.calls[1]?.[0]).toBe('conversation.hero.brand.badge')
     expect(renderSlot.mock.calls[0]?.[0]).toBe('conversation.hero.brand.mark')
     const brandMarkOwner = renderSlot.mock.calls[0]?.[1]
     if (brandMarkOwner === undefined || !('size' in brandMarkOwner) || !('className' in brandMarkOwner)) {
