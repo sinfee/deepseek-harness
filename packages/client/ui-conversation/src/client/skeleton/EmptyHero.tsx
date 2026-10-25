@@ -65,7 +65,7 @@ export function WorkspaceChip({ buttonRef, label, menuOpen = false, onClick, t }
 export interface HeroShellProps {
   /** The owner's locale seat, passed down as a plain prop. */
   t: HeroTranslate
-  /** Authorized renderer for the hero brand-mark slot. */
+  /** 首页品牌图标与徽标插槽的授权渲染器。 */
   renderSlot: ConversationContentProps['renderSlot']
   /** Overlay content after the stack (modals). */
   children?: ReactNode
@@ -153,7 +153,9 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
           <span className={css.titleGroup}>
             {/* Own element: keeps the headline text addressable apart from the badge. */}
             <span>{t('hero.headline')}</span>
-            <span className={css.previewBadge}>{t('hero.preview')}</span>
+            <span className={css.previewBadge}>
+              {renderSlot('conversation.hero.brand.badge', {}, { fallback: t('hero.preview') })}
+            </span>
           </span>
         </div>
         <div className={css.body}>
