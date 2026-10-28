@@ -51,9 +51,6 @@ const INLINE_CSS_VIRTUAL_PREFIX = '\0dsh-inline-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 const INLINE_CSS_QUERY = '?inline'
 
-/** Image imports become base64 data URLs embedded in the plugin's own bundle. */
-const IMAGE_MEDIA_TYPES = new Map([['.svg', 'image/svg+xml'], ['.png', 'image/png'], ['.webp', 'image/webp']])
-
 /** Win7 专版 Electron 与独立 Chromium 共用的浏览器最低目标。 */
 const WINDOWS_7_BROWSER_TARGET = 'chrome152'
 

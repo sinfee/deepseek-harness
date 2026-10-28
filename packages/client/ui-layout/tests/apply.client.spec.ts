@@ -187,11 +187,11 @@ describe('node half', () => {
     const fiber = ctx.plugin((child) => { nodeApply(child, { keepSidebarRail: true }) })
     await fiber.await()
     const table: IndexInjection[] = []
-    ctx.emit('webserver/index-inject', table)
+    ;(ctx as any).emit('webserver/index-inject', table)
     expect(table).toEqual([{ kind: 'global', name: LAYOUT_CONFIG_GLOBAL, value: { keepSidebarRail: true } }])
     await fiber.dispose()
     const disposed: IndexInjection[] = []
-    ctx.emit('webserver/index-inject', disposed)
+    ;(ctx as any).emit('webserver/index-inject', disposed)
     expect(disposed).toEqual([])
   })
 })

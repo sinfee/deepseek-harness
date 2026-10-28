@@ -200,8 +200,8 @@ export class DesktopHostProcess {
     private readonly packageManager?: { readonly pnpm: string; readonly nodeBin: string },
 
     private readonly onPlatformSession?: (session: PlatformSession | null) => void,
-    private readonly onExtensionMessage?: (child: ChildProcess, message: unknown) => boolean,
     private readonly onPluginOperation?: (record: PluginOperationRecord) => void,
+    private readonly onExtensionMessage?: (child: ChildProcess, message: unknown) => boolean,
   ) {}
 
   /**

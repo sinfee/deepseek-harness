@@ -542,13 +542,13 @@ async function main(): Promise<void> {
       hostInspectPort, { ...hostEnvironment, DSH_CLIENT_VERSION: desktopClientVersion() }, onFailure,
       primaryRuntime,
       resources, (next) => { platformView.setSession(next) },
-      (child, message) => updates.handleHostMessage?.(child, message) ?? false,
       (record) => {
         operationJournal ??= new OperationJournal(join(app.getPath('userData'), 'plugin-operations'), {
           segmentBytes: 256 * 1024, recordBytes: 4096, queuedBytes: 64 * 1024,
         })
         operationJournal.enqueue(JSON.stringify(record))
-      })
+      },
+      (child, message) => updates.handleHostMessage?.(child, message) ?? false)
     return {
       start: async () => {
         const ready = await host.start()
