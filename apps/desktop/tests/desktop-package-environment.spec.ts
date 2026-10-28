@@ -109,7 +109,6 @@ describe('Desktop local packaging configuration', () => {
     expect(() => { validateDesktopPackageEnvironment(localMacOSPackageEnvironment({}), WINDOWS, { unsigned: true }) }).toThrow()
     expect(() => { validateDesktopPackageEnvironment(local, WINDOWS, { unsigned: false }) }).toThrow()
   })
-  })
   it('selects macOS local defaults while excluding inherited release settings and retaining build networking', () => {
     const parent = {
       PATH: 'build-tools', HTTPS_PROXY: 'http://proxy.example:8080', DSH_DESKTOP_NPM_REGISTRY: 'https://registry.npmmirror.com',
