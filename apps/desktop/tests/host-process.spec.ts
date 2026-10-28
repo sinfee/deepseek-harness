@@ -16,7 +16,7 @@ it('显式扩展可处理自己的 IPC，其他消息仍由官方协议校验', 
   const extension = vi.fn((_child, message: unknown) => typeof message === 'object' && message !== null
     && 'type' in message && message.type === 'custom-extension')
   const host = new DesktopHostProcess(process.execPath, runtime, runtime, undefined, process.env,
-    undefined, undefined, undefined, undefined, extension)
+    undefined, undefined, undefined, undefined, undefined, extension)
   hosts.push(host)
   await host.start()
   expect(extension.mock.calls.some(([, message]) => typeof message === 'object' && message !== null
