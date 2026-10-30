@@ -51,9 +51,6 @@ const INLINE_CSS_VIRTUAL_PREFIX = '\0dsh-inline-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 const INLINE_CSS_QUERY = '?inline'
 
-/** Win7 专版 Electron 与独立 Chromium 共用的浏览器最低目标。 */
-const WINDOWS_7_BROWSER_TARGET = 'chrome152'
-
 /**
  * Emit one plugin-owned style injector and an optional CSS Modules export.
  * @param css - JavaScript expression yielding the stylesheet text; see {@link stylesheetSource}.
@@ -312,7 +309,7 @@ function staticLinkedConfig(id: string, entry: string, outputName = basename(ent
     outDir: 'lib',
     format: ['esm'],
     platform: 'browser',
-    target: WINDOWS_7_BROWSER_TARGET,
+    target: 'es2024',
     fixedExtension: false,
     dts: false,
     clean: false,
@@ -793,7 +790,7 @@ function clientConfig(
     outDir: 'lib',
     format: 'cjs',
     platform: 'browser',
-    target: WINDOWS_7_BROWSER_TARGET,
+    target: 'es2024',
     // Types ship from lib/types (tsc); dts here would wrap the banner/footer into .d.cts and break parsing.
     dts: false,
     // Plugin code is fetched outside Vite's module graph, so its own bundle

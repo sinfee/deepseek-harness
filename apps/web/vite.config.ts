@@ -175,8 +175,7 @@ export default defineConfig({
     productWebBundleIsolation(src('../..'), src('.')),
   ],
   build: {
-    // 共享前端以 Win7 专版 Electron 的 Chromium 152 为最低目标。
-    target: 'chrome152',
+    target: 'es2022',
     sourcemap: true,
     rollupOptions: {
       input: {
