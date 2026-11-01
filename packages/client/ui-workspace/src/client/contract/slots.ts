@@ -322,6 +322,9 @@ export type SessionRowActionProps<Injected extends object = object> =
 
 /** One transient Workspace notice rendered by the overlay toast entry. */
 export type RowToast =
+  | { kind: 'deleteSucceeded' }
+  | { kind: 'exportSucceeded' }
+  | { kind: 'exportFailed' }
   | { kind: 'archived'; sessionId: SessionId }
   | { kind: 'stoppedAndArchived'; sessionId: SessionId }
   | { kind: 'sessionIdCopied' }

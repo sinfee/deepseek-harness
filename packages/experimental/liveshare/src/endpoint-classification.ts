@@ -37,6 +37,7 @@ export type ReaderEndpointClass = Extract<ViewerEndpointClass, `reader-${string}
  * `reader-*` entries, so the policy whitelist has no second handwritten copy.
  */
 export const VIEWER_ENDPOINT_CLASSES = {
+  'session/delete': 'owner-only',
   // ── reader-global-read ─────────────────────────────────────────────────────────────
   'llm/listConfigurableProviders': 'reader-global-read', // the page reads the configurable provider catalog
   'llm/listProviders': 'reader-global-read', // the page lists providers

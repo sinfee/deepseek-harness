@@ -379,6 +379,14 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     throw new Error(message)
   }
 
+  /**
+   * 删除成功后释放当前页面的会话引用。
+   * @param sessionId - 已永久删除的会话。
+   */
+  forgetSession(sessionId: SessionId): void {
+    if (this.mainReference?.sessionId === sessionId) this.clearMain()
+  }
+
   async archiveSession(sessionId: SessionId, options: { readonly stopActivity?: boolean } = {}): Promise<void> {
     await this.workspaces.archiveSession(sessionId, options)
     if (this.mainReference?.sessionId === sessionId) this.clearMain()

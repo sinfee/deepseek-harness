@@ -142,6 +142,15 @@ declare module '@deepseek-ai/cordis' {
  * on this backend instance observe at least that prefix.
  */
 export abstract class SessionPersistence extends Service {
+  /**
+   * 永久删除一条已释放写入所有权的会话；不删除共享附件或其他会话。
+   * @param id - 要删除的会话。
+   * @returns 是否存在并删除了持久化记录。
+   */
+  delete(id: SessionId): Promise<boolean> {
+    return Promise.reject(new Error(`session deletion is unavailable: ${id}`))
+  }
+
   /** Process-local instance identity, stable through Context proxies and distinct after service replacement. */
   readonly identity: symbol = Symbol('sessionPersistence')
 

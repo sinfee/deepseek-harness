@@ -28,7 +28,7 @@ function bench() {
     return source
   }
   ctx.provide('remoteAccess', { source: (_kind: string, _id: string, action: string) => access(action) } as never)
-  const actions = { pinSession: vi.fn(), unpinSession: vi.fn(), archiveSession: vi.fn(), unarchiveSession: vi.fn(),
+  const actions = { requestDelete: vi.fn(), exportSession: vi.fn(async () => {}), pinSession: vi.fn(), unpinSession: vi.fn(), archiveSession: vi.fn(), unarchiveSession: vi.fn(),
     forkSession: vi.fn(), requestSessionRename: vi.fn(), copySessionId: vi.fn(async () => {}) }
   const fiber = ctx.plugin({ apply: (plugin: Context) => { registerSessionMenus(plugin, actions) } })
   const target = { kind: 'session' as const, value: { sessionId: SessionId('background'), displayTitle: 'Background' } }
@@ -46,8 +46,11 @@ it('preserves built-in order, groups, icons, command identities, and captured ac
     ['session.pin/pin', 'Pin session', true, undefined, undefined, undefined],
     ['session.rename/rename', 'Rename', true, 'session.rename', undefined, undefined],
     ['session.fork/fork', 'Fork session', true, 'session.fork', undefined, undefined],
+    ['session.export/markdown', 'Export conversation as Markdown', false, undefined, undefined, undefined],
+    ['session.export/json', 'Export conversation as JSON (all events)', false, undefined, undefined, undefined],
     ['session.id/copy', 'Copy Session ID', true, undefined, true, undefined],
     ['session.archive/archive', 'Archive session', true, 'session.archive', true, true],
+    ['session.delete/delete', 'Permanently delete conversation', true, undefined, undefined, true],
   ])
   menu.dispose()
   for (const id of views.map(item => item.id)) b.open().select(id)
@@ -56,6 +59,9 @@ it('preserves built-in order, groups, icons, command identities, and captured ac
   expect(b.actions.forkSession).toHaveBeenCalledWith('background')
   expect(b.actions.copySessionId).toHaveBeenCalledWith('background')
   expect(b.actions.archiveSession).toHaveBeenCalledWith('background')
+  expect(b.actions.requestDelete).toHaveBeenCalledWith('background', 'Background')
+  expect(b.actions.exportSession).toHaveBeenCalledWith('background', 'markdown')
+  expect(b.actions.exportSession).toHaveBeenCalledWith('background', 'json')
   const unpin = b.open()
   b.list.set({ ...b.list.getSnapshot(), pinnedSessionIds: [b.target.value.sessionId] })
   expect(unpin.source.getSnapshot()[0]).toMatchObject({ label: 'Unpin session' })
@@ -64,7 +70,7 @@ it('preserves built-in order, groups, icons, command identities, and captured ac
   const restore = b.open()
   b.list.set({ ...b.list.getSnapshot(), archivedSessionIds: [b.target.value.sessionId] })
   expect(restore.source.getSnapshot().some(item => item.id === 'session.pin/pin')).toBe(false)
-  const archive = restore.source.getSnapshot().at(-1)!
+  const archive = restore.source.getSnapshot().find(item => item.id === 'session.archive/archive')!
   expect(archive).toMatchObject({ label: 'Unarchive session' })
   expect(archive.commandId).toBeUndefined()
   restore.select(archive.id)
@@ -76,6 +82,8 @@ it('reacts to permission and locale updates, prevents withdrawn actions, and dis
   await b.fiber.await()
   const menu = b.open()
   b.access('session/rename').set(false)
+  b.access('session/delete').set(false)
+  b.access('session/page').set(false)
   b.access('session/fork').set(false)
   b.access('workspace/archiveSession').set(false)
   b.access('workspace/pinSession').set(false)

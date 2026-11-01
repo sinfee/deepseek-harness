@@ -163,3 +163,7 @@ These limits define where the seam's guarantees stop. They are current package c
 None.
 
 </details>
+
+## Session deletion and export
+
+`SessionPersistence.delete(id)` permanently removes stored Session logs after write ownership is released. The default implementation rejects unsupported deletion; providers must opt in explicitly. Shared attachments and other Sessions are outside this operation.

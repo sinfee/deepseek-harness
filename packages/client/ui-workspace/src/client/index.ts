@@ -1,3 +1,4 @@
+import { DeleteSessionDialog, type DeleteSessionInjected } from './session-actions/DeleteSession.tsx'
 import { IconEditOutlineRegular, IconTrashOutlineRegular, IconPinFillRegular, IconPinOutlineRegular, IconUnarchiveOutlineRegular, IconArchiveOutlineRegular, IconBranchOutlineRegular, IconCopyOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { SessionMenu } from './session-actions/SessionMenu.tsx'
 import type {} from '@deepseek-ai/dsh-client-ui-context-menu/client'
@@ -101,7 +102,7 @@ const NS = 'workspace'
  * declaration through `slots.inject()` instead of assuming order.
  */
 export const inject = ['contextMenus',
-  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts', 'remoteAccess',
+  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'remote.session', 'layout', 'shortcuts', 'remoteAccess',
 ]
 
 /**
@@ -349,8 +350,59 @@ export function apply(ctx: Context): void {
       kind: 'list', scope: 'root', inject: { hooks: { menuOpenState: menuOpenStateFactory, shortcuts: ctx.shortcuts.catalog } },
     } },
   }, SessionMenu))
+  const deleteRequest = createSnapshotStore<{ sessionId: SessionId; displayTitle: string } | null>(null)
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay', id: 'workspace.session-delete', locale: NS,
+    inject: (): DeleteSessionInjected => ({
+      hooks: { deleteRequest },
+      settleDelete: () => { deleteRequest.set(null) },
+      deleteSession: async (sessionId) => {
+        const result = await ctx.remote.session.delete({ sessionId })
+        if (!result.ok) {
+          ctx.logger.warn('conversation deletion failed', result.error)
+          throw new Error(result.error.message)
+        }
+        uiWorkspace.forgetSession(sessionId)
+        notify({ kind: 'deleteSucceeded' })
+        await sessions.refresh()
+      },
+    }),
+  }, DeleteSessionDialog))
+  const exportLifetime = new AbortController()
+  const exportUrls = new Map<string, ReturnType<typeof setTimeout>>()
+  ctx.effect(() => () => {
+    exportLifetime.abort()
+    for (const [url, timer] of exportUrls) { clearTimeout(timer); URL.revokeObjectURL(url) }
+    exportUrls.clear()
+  }, 'workspace: conversation export lifecycle')
   registerSessionMenus(ctx, {
     ...pinInjected(), ...archiveInjected(), ...renameInjected(), ...forkInjected(), ...sessionIdInjected(),
+    exportSession: async (sessionId: SessionId, format: 'markdown' | 'json') => {
+      try {
+        const response = await fetch(`api/session.${format}?${new URLSearchParams({ sessionId })}`, { signal: exportLifetime.signal })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const blob = await response.blob()
+        exportLifetime.signal.throwIfAborted()
+        const url = URL.createObjectURL(blob)
+        const anchor = document.createElement('a')
+        anchor.href = url
+        anchor.download = `conversation-${String(sessionId).replace(/[^A-Za-z0-9_-]/g, '_')}.${format === 'markdown' ? 'md' : 'json'}`
+        document.body.append(anchor)
+        try { anchor.click() } finally {
+          anchor.remove()
+          // 浏览器下载异步读取对象地址，延迟释放以保证完整内容可用。
+          exportUrls.set(url, setTimeout(() => { URL.revokeObjectURL(url); exportUrls.delete(url) }, 60_000))
+        }
+        notify({ kind: 'exportSucceeded' })
+      } catch (error) {
+        if (exportLifetime.signal.aborted) return
+        ctx.logger.warn('conversation export failed', error)
+        notify({ kind: 'exportFailed' })
+      }
+    },
+    requestDelete: (sessionId: SessionId, displayTitle: string) => {
+      if (deleteRequest.getSnapshot() === null) deleteRequest.set({ sessionId, displayTitle })
+    },
   })
   ctx.slots.inject('sidebar.workspaces.session.row.action', function* () {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.row.action', id: 'archive', order: 100, locale: NS, inject: archiveInjected }, ArchiveSessionRowButton)

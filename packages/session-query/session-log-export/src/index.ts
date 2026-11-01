@@ -102,6 +102,26 @@ export function apply(ctx: Context, config: Config = {}): void {
     },
   })
   connectionOf(ctx).fetch.register({
+    path: '/api/session.json', methods: ['GET', 'HEAD'], requestBody: 'buffered',
+    fetch: async (request) => {
+      const id = new URL(request.url).searchParams.get('sessionId')
+      if (!id) return new Response('missing sessionId', { status: 400 })
+      const query = ctx.get('sessionQuery')
+      if (query === undefined) return new Response('session export unavailable', { status: 503 })
+      try {
+        request.signal.throwIfAborted()
+        const snapshot = await query.readSession(brandString<SessionId>(id))
+        request.signal.throwIfAborted()
+        return new Response(request.method === 'HEAD' ? null : JSON.stringify({
+          format: 'dsh-session-export', version: 1, ...snapshot,
+        }, null, 2), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } })
+      } catch (error: unknown) {
+        request.signal.throwIfAborted()
+        return new Response('session export failed', { status: isSessionNotFound(error) ? 404 : 500 })
+      }
+    },
+  })
+  connectionOf(ctx).fetch.register({
     path: SESSION_MARKDOWN_EXPORT_PATH,
     methods: ['GET', 'HEAD'],
     requestBody: 'buffered',

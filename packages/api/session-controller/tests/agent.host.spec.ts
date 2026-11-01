@@ -263,3 +263,39 @@ describe('ApiSession creation', () => {
       .rejects.toThrow('failed to ensure project directory')
   })
 })
+
+
+describe('会话删除的所有权与并发', () => {
+  it('等待代理释放写入器后删除，并拒绝删除期间重新打开', async () => {
+    const { ctx, agents } = await harness()
+    const meta = header('delete-owned')
+    const live = agent(ctx, meta)
+    const order: string[] = []
+    agents.own({ agent: live, dispose: async () => { order.push('disposed') } })
+    await agents.deleteSession(meta.id, async () => {
+      order.push('delete')
+      const result = await agents.resolveAgent(meta.id)
+      expect(result).toMatchObject({ error: { code: 'session/agent-busy' } })
+      await expect(agents.deleteSession(meta.id, async () => {})).rejects.toThrow('already in progress')
+    })
+    expect(order).toEqual(['disposed', 'delete'])
+  })
+  it('不删除其他运行时拥有的活动代理', async () => {
+    const { ctx, agents } = await harness()
+    const meta = header('delete-foreign')
+    await ctx.agents.register(agent(ctx, meta))
+    const remove = vi.fn(async () => {})
+    await expect(agents.deleteSession(meta.id, remove)).rejects.toThrow('another runtime')
+    expect(remove).not.toHaveBeenCalled()
+  })
+})
+
+
+it('后台任务仍在停止时保留持久化记录', async () => {
+  const { ctx, agents } = await harness()
+  const id = SessionId('delete-stopping')
+  ctx.on('workspace/session-activity', async (_request, next) => [{ kind: 'turn' as const }, ...await next()])
+  const remove = vi.fn(async () => {})
+  await expect(agents.deleteSession(id, remove)).rejects.toMatchObject({ code: 'session/agent-busy' })
+  expect(remove).not.toHaveBeenCalled()
+})

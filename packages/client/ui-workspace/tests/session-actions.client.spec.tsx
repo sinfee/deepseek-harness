@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { DeleteSessionDialog } from '../src/client/session-actions/DeleteSession.tsx'
 import { contextMenuHook } from '@deepseek-ai/dsh-client-test-runtime'
 /**
  * The shipped Session row actions rendered directly with hand-built props:
@@ -690,5 +691,26 @@ describe('RowActionToast', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+
+describe('永久删除对话确认', () => {
+  it('取消不删除，执行期间禁止重复提交，失败保留对话框供重试', async () => {
+    const request = createSnapshotStore<{ sessionId: SessionId; displayTitle: string } | null>({ sessionId: sid('delete-target'), displayTitle: '目标对话' })
+    const settleDelete = vi.fn(() => { request.set(null) })
+    let rejectDelete: (reason: Error) => void = () => {}
+    const deleteSession = vi.fn(() => new Promise<void>((_resolve, reject) => { rejectDelete = reject }))
+    render(<DeleteSessionDialog {...overlay} useDeleteRequest={bindSnapshotSelector(request)} settleDelete={settleDelete} deleteSession={deleteSession} />)
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(deleteSession).not.toHaveBeenCalled()
+    act(() => { request.set({ sessionId: sid('delete-target'), displayTitle: '目标对话' }) })
+    fireEvent.click(screen.getByRole('button', { name: '永久删除对话' }))
+    expect(deleteSession).toHaveBeenCalledExactlyOnceWith('delete-target')
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '取消' }).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '永久删除对话' }).disabled).toBe(true)
+    await act(async () => { rejectDelete(new Error('failed')) })
+    expect(screen.getByRole('alert').textContent).toContain('删除未完成')
+    expect(screen.getByRole('dialog')).toBeTruthy()
   })
 })

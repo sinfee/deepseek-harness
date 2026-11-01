@@ -240,3 +240,25 @@ describe('Session Markdown Fetch route', () => {
     await dispose()
   })
 })
+
+
+describe('Session JSON 导出', () => {
+  it('保留会话头和完整事件，并支持 HEAD 和卸载', async () => {
+    const { shared, connection, dispose } = await mounted(query())
+    const url = `/api/session.json?sessionId=${SESSION_ID}`
+    const response = await shared.fetch(request(url), connection.browserPeer)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ format: 'dsh-session-export', version: 1,
+      session: HEADER, inheritedEventCount: 0, events: EVENTS })
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    const head = await shared.fetch(request(url, { method: 'HEAD' }), connection.browserPeer)
+    expect(head.body).toBeNull()
+    await dispose()
+    expect((await shared.fetch(request(url), connection.browserPeer)).status).toBe(404)
+  })
+  it('拒绝缺失身份并为不存在的会话返回 404', async () => {
+    const { shared, connection } = await mounted(query({ readSession: async () => { throw missingSessionError() } }))
+    expect((await shared.fetch(request('/api/session.json'), connection.browserPeer)).status).toBe(400)
+    expect((await shared.fetch(request(`/api/session.json?sessionId=${SESSION_ID}`), connection.browserPeer)).status).toBe(404)
+  })
+})

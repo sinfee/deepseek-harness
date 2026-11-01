@@ -175,3 +175,7 @@ Header 向 Markdown 复制控制器请求被点击的 Session。点击期间，�
 下载刻意限定在浏览器范围；Host 路径或原生文件夹导出需要新的端点约定，并决定 ZIP 的落盘位置。
 
 </details>
+
+## 会话删除与导出补充
+
+会话菜单可将 `/api/session.markdown` 下载为 Markdown，或将 `/api/session.json` 下载为 JSON。JSON 包含导出格式标识、版本、会话头、继承事件数量与完整事件，不嵌入附件字节。JSON 支持 GET／HEAD、取消及禁用缓存；既有 ZIP 导出继续携带子会话与附件。

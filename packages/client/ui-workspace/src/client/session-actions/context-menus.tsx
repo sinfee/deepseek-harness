@@ -1,3 +1,4 @@
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 /** Structured Session actions over the workspace owner's existing callbacks. */
 import type { Context } from '@deepseek-ai/cordis'
 import type { RemoteEndpoint } from '@deepseek-ai/dsh-api-remote-access/client'
@@ -9,6 +10,7 @@ import type {
 
 type Actions = Omit<PinSessionInjected & ArchiveSessionInjected, 'hooks'>
   & ForkSessionInjected & RenameSessionInjected & SessionIdInjected
+  & { exportSession: (sessionId: SessionId, format: 'markdown' | 'json') => Promise<void>; requestDelete: (sessionId: SessionId, displayTitle: string) => void }
 
 /**
  * Register built-in actions while retaining the legacy Slot for external components.
@@ -52,10 +54,18 @@ export function registerSessionMenus(ctx: Context, actions: Actions): void {
     id: 'fork', label: t('menu.fork'), icon: { key: 'workspace.fork' }, commandId: 'session.fork' as ShortcutCommandId,
     run: () => { actions.forkSession(target.sessionId) },
   }] : [])
+  register('export', 440, ['session/page'], target => allowed(target, 'session/page') ? [
+    { id: 'markdown', label: t('export.markdown'), run: () => actions.exportSession(target.sessionId, 'markdown') },
+    { id: 'json', label: t('export.json'), run: () => actions.exportSession(target.sessionId, 'json') },
+  ] : [])
   register('id', 450, [], target => [{
     id: 'copy', label: t('menu.sessionId'), icon: { key: 'workspace.copy' }, separatorBefore: true,
     run: () => actions.copySessionId(target.sessionId),
   }])
+  register('delete', 700, ['session/delete'], target => allowed(target, 'session/delete') ? [{
+    id: 'delete', label: t('delete.session'), icon: { key: 'workspace.delete' }, danger: true, afterContent: true,
+    run: () => { actions.requestDelete(target.sessionId, target.displayTitle) },
+  }] : [])
   register('archive', 600, ['workspace/archiveSession', 'workspace/unarchiveSession'], (target) => {
     const restoring = archived(target)
     if (!allowed(target, restoring ? 'workspace/unarchiveSession' : 'workspace/archiveSession')) return []

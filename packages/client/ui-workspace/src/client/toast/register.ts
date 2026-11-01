@@ -21,6 +21,15 @@ export function registerToasts(
   })
   ctx.slots.registerFactory({ name: 'workspace.toast.content', scope: 'root' }, WorkspaceToast)
   ctx.slots.inject('workspace.toast', function* () {
+    yield ctx.slots.register({ name: 'workspace.toast', key: 'deleteSucceeded', locale: 'workspace',
+      inject: (): ToastDisplayInjected<'deleteSucceeded'> => ({ display: (_notice, t) => ({ text: t('delete.session.success'), tone: 'success' }) }),
+    }, ToastEntry<PropsRuntime<'workspace.toast', 'deleteSucceeded'>>)
+    yield ctx.slots.register({ name: 'workspace.toast', key: 'exportSucceeded', locale: 'workspace',
+      inject: (): ToastDisplayInjected<'exportSucceeded'> => ({ display: (_notice, t) => ({ text: t('export.success'), tone: 'plain' }) }),
+    }, ToastEntry<PropsRuntime<'workspace.toast', 'exportSucceeded'>>)
+    yield ctx.slots.register({ name: 'workspace.toast', key: 'exportFailed', locale: 'workspace',
+      inject: (): ToastDisplayInjected<'exportFailed'> => ({ display: (_notice, t) => ({ text: t('export.failed'), tone: 'warning' }) }),
+    }, ToastEntry<PropsRuntime<'workspace.toast', 'exportFailed'>>)
     yield ctx.slots.register({
       name: 'workspace.toast', key: 'sessionIdCopied', locale: 'workspace',
       inject: (): ToastDisplayInjected<'sessionIdCopied'> => ({

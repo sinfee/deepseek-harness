@@ -175,3 +175,7 @@ This Dev Note is working context for maintainers: open design questions and dire
 The download is deliberately browser-scoped; a Host-path or native folder export would need a new endpoint contract and a decision on where the ZIP lands.
 
 </details>
+
+## Session deletion and export
+
+The Session menu downloads `/api/session.markdown` as Markdown or `/api/session.json` as JSON. JSON carries the export format marker, version, Session header, inherited event count, and complete events, without attachment bytes. JSON supports GET, HEAD, cancellation, and no-store caching. Existing ZIP export retains descendants and attachment bytes.

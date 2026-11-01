@@ -289,6 +289,31 @@ function waitWithAbort<T>(operation: Promise<T>, signal?: AbortSignal): Promise<
  * flush, and never existed if the process crashes before that.
  */
 class JsonlSessionPersistence extends SessionPersistence {
+  override async delete(id: SessionId): Promise<boolean> {
+    this.tracker.claimWrite(id)
+    let lease: SessionWriteLease | undefined
+    try {
+      const selected = await this.findLog(id)
+      if (selected === undefined) return false
+      const directory = dirname(selected.currentPath)
+      lease = await this.acquireLease(id, undefined, directory)
+      // 只删除存储层识别的日志文件，保留锁文件及共享附件，不递归删除目录。
+      const entries = await readdir(directory, { withFileTypes: true })
+      const ordered = entries.sort((a, b) =>
+        Number(join(directory, a.name) === selected.sourcePath) - Number(join(directory, b.name) === selected.sourcePath))
+      for (const entry of ordered) {
+        if (parseGenerationLogFilename(entry.name, 'none') === undefined
+          && parseGenerationLogFilename(entry.name, 'zstd') === undefined) continue
+        if (!entry.isFile()) throw new Error('session deletion requires regular log files')
+        await rm(join(directory, entry.name))
+      }
+      this.coldLogMemo.delete(id)
+      return true
+    } finally {
+      try { await lease?.release() } finally { this.tracker.releaseClaim(id) }
+    }
+  }
+
   /** Backend label for diagnostics and effects; shadows `Service.name` without changing the service key. */
   override readonly name = 'session-persistence-jsonl'
 

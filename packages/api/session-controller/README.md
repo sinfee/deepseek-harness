@@ -141,3 +141,7 @@ No direct effect; model requests remain owned by the Agent and LLM packages.
 None.
 
 </details>
+
+## Session deletion and export
+
+`session/delete` rejects reopening and model steps during deletion. It stops Session activity, disposes the Agent handle owned by this controller, verifies activity has stopped, and deletes persistence before broadcasting removal and clearing Workspace, pin, and archive associations. Other runtime owners or writers refuse deletion. Independent forks, child Sessions, and shared attachments remain. A failed deletion does not restart stopped work.

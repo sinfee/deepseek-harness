@@ -222,7 +222,7 @@ export class SessionController extends TypertRemoteService {
       ctx.emit('api-session/added', this.listState.summaryFor(session))
     })
     ctx.on('session/disposed', (session) => {
-      ctx.emit('api-session/removed', session.id)
+      if (!this.agents.isDeleting(session.id)) ctx.emit('api-session/removed', session.id)
     })
     const publishAgentAvailability = ({ agent }: { agent: Agent }): undefined => {
       if (ctx.sessions.get(agent.id) === agent.session) {
@@ -433,6 +433,27 @@ export class SessionController extends TypertRemoteService {
   @Remote('rename')
   rename(request: SessionRenameRequest): Promise<SessionRenameValue> {
     return this.commands.rename(request)
+  }
+
+  /**
+   * 停止并永久删除一条会话，保留独立分叉、子会话与共享附件。
+   * @param request - 要删除的会话身份。
+   * @returns 删除确认；失败时向调用方报告，已停止的任务不会自动恢复。
+   */
+  @Remote('delete')
+  async delete(request: { sessionId: SessionId }): Promise<{ deleted: boolean }> {
+    const id = request.sessionId
+    const registry = this.ctx.workspaceRegistry
+    await this.agents.deleteSession(id, async () => {
+      const persistence = this.ctx.get('sessionPersistence')
+      if (persistence === undefined) throw new Error('session persistence is unavailable')
+      await persistence.delete(id)
+    })
+    this.ctx.emit('api-session/removed', id)
+    for (const workspace of registry.list()) await workspace.detachSession(id)
+    await registry.unpinSession(id)
+    await registry.unarchiveSession(id)
+    return { deleted: true }
   }
 
   /**

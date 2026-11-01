@@ -257,3 +257,7 @@ These limits cover search, navigation, archival, and folder selection.
 None.
 
 </details>
+
+## Session deletion and export
+
+The Session menu exports Markdown or JSON and offers permanent deletion after confirmation. Markdown omits reasoning and internal events; JSON contains the complete event log and header. Use the existing ZIP export for attachment bytes and descendants. Deletion stops activity, releases the writer, removes stored logs and Workspace associations, and retains Workspace files, independent forks, child Sessions, and shared attachments. Failed deletion keeps its confirmation open. Session extensions can contribute additional actions through the existing context-menu registry without depending on the environment plugin.
