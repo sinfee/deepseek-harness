@@ -362,6 +362,13 @@ Freshness: once an `append` or `flush` resolves, reads started afterwards on thi
 
 ```ts cordis-catalog
 /**
+ * 永久删除一条已释放写入所有权的会话；不删除共享附件或其他会话。
+ * @param id - 要删除的会话。
+ * @returns 是否存在并删除了持久化记录。
+ */
+delete(id: SessionId): Promise<boolean>
+
+/**
  * Create a new stored session and take its write ownership.
  * @param header - the immutable header (id, version, cwd, lineage) to store.
  * @param options - optional cancellation.

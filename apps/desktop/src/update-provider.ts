@@ -5,10 +5,12 @@ import { pathToFileURL } from 'node:url'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
 
 /** 桌面状态组件和更新调度所需的操作。 */
-export type DesktopUpdateProvider = Pick<DesktopUpdateCoordinator, 'state' | 'check' | 'download' | 'install' | 'dispose'> & {
+export type DesktopUpdateProvider = {
   /** 处理已绑定宿主的扩展消息；未识别时返回 false，交回官方协议校验。 */
   handleHostMessage?: (child: ChildProcess, message: unknown) => boolean
-}
+} & Pick<DesktopUpdateCoordinator,
+  'state' | 'check' | 'download' | 'install' | 'dispose' | 'revision' | 'selectedChannel'
+  | 'configurationFailure' | 'suspendConfiguration' | 'switchChannel'>
 
 /**
  * 从显式配置的本地模块加载更新提供者。
@@ -43,5 +45,34 @@ export async function createDesktopUpdateProvider(
     || !('install' in provider) || typeof provider.install !== 'function'
     || !('dispose' in provider) || typeof provider.dispose !== 'function') throw new Error('桌面更新模块操作不完整')
   if ('handleHostMessage' in provider && typeof provider.handleHostMessage !== 'function') throw new Error('桌面扩展消息处理器无效')
-  return provider as DesktopUpdateProvider
+  const external = provider as Pick<DesktopUpdateProvider, 'state' | 'check' | 'download' | 'install' | 'dispose' | 'handleHostMessage'>
+    & Partial<Pick<DesktopUpdateProvider, 'revision' | 'selectedChannel' | 'configurationFailure' | 'suspendConfiguration' | 'switchChannel'>>
+  let suspended: DesktopUpdateProvider['state'] | undefined
+  let failure: DesktopUpdateProvider['configurationFailure']
+  return {
+    get state() { return suspended ?? external.state },
+    get revision() { return external.revision ?? 0 },
+    get selectedChannel() { return external.selectedChannel ?? parameters[6] ?? 'nightly' },
+    get configurationFailure() { return external.configurationFailure ?? failure },
+    check: (...args) => suspended === undefined ? external.check(...args) : Promise.resolve(suspended),
+    download: (...args) => {
+      if (suspended !== undefined) return Promise.resolve(suspended)
+      return external.download(...args)
+    },
+    install: (...args) => {
+      if (suspended !== undefined) return Promise.resolve(suspended)
+      return external.install(...args)
+    },
+    dispose: () => external.dispose(),
+    suspendConfiguration(detail, reason = 'startup') {
+      if (external.suspendConfiguration !== undefined) { external.suspendConfiguration(detail, reason); return }
+      failure = reason
+      suspended = parameters[0]({ phase: 'error', failedOperation: 'configuration', message: detail })
+    },
+    switchChannel: async (...args) => {
+      if (external.switchChannel === undefined) throw new Error('当前桌面更新提供者不支持切换更新渠道')
+      return external.switchChannel(...args)
+    },
+    ...(external.handleHostMessage === undefined ? {} : { handleHostMessage: external.handleHostMessage.bind(external) }),
+  }
 }

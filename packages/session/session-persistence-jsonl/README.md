@@ -138,6 +138,10 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+## Session deletion and export
+
+Permanent deletion acquires the local writer claim and cross-process lease, then removes recognized generation log files in the Session directory, with the selected generation last. It refuses nonregular log entries and active writers. It never recursively removes a directory and retains the lock file and shared attachments.
+
 ## Model Experience
 
 ### Resumed conversation history
@@ -179,7 +183,3 @@ These limits define when this backend is a poor fit or needs special operational
 None.
 
 </details>
-
-## Session deletion and export
-
-Permanent deletion acquires the local writer claim and cross-process lease, then removes recognized generation log files in the Session directory, with the selected generation last. It refuses nonregular log entries and active writers. It never recursively removes a directory and retains the lock file and shared attachments.

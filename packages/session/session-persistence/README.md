@@ -124,6 +124,10 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+## Session deletion and export
+
+`SessionPersistence.delete(id)` permanently removes stored Session logs after write ownership is released. The default implementation rejects unsupported deletion; providers must opt in explicitly. Shared attachments and other Sessions are outside this operation.
+
 ## Model Experience
 
 ### Resumed conversation history
@@ -163,7 +167,3 @@ These limits define where the seam's guarantees stop. They are current package c
 None.
 
 </details>
-
-## Session deletion and export
-
-`SessionPersistence.delete(id)` permanently removes stored Session logs after write ownership is released. The default implementation rejects unsupported deletion; providers must opt in explicitly. Shared attachments and other Sessions are outside this operation.

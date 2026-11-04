@@ -701,7 +701,8 @@ describe('永久删除对话确认', () => {
     const settleDelete = vi.fn(() => { request.set(null) })
     let rejectDelete: (reason: Error) => void = () => {}
     const deleteSession = vi.fn(() => new Promise<void>((_resolve, reject) => { rejectDelete = reject }))
-    render(<DeleteSessionDialog {...overlay} useDeleteRequest={bindSnapshotSelector(request)} settleDelete={settleDelete} deleteSession={deleteSession} />)
+    render(<DeleteSessionDialog {...overlay} useDeleteRequest={bindSnapshotSelector(request)}
+      settleDelete={settleDelete} deleteSession={deleteSession} />)
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(deleteSession).not.toHaveBeenCalled()
     act(() => { request.set({ sessionId: sid('delete-target'), displayTitle: '目标对话' }) })

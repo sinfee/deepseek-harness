@@ -2,7 +2,7 @@
 
 import ShortcutsService from '../../shortcuts/src/client/index.ts'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import { Context, type Fiber } from '@deepseek-ai/cordis'
+import { Context, type Fiber, type Events } from '@deepseek-ai/cordis'
 import { stubConfigForm } from '@deepseek-ai/dsh-client-test-runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
@@ -252,11 +252,12 @@ describe('node half', () => {
     const fiber = ctx.plugin((child) => { nodeApply(child, { keepSidebarRail: true }) })
     await fiber.await()
     const table: IndexInjection[] = []
-    ;(ctx as any).emit('webserver/index-inject', table)
+    const peer = { principal: { kind: 'owner' } } as Parameters<Events['webserver/index-inject']>[1]
+    ctx.emit('webserver/index-inject', table, peer)
     expect(table).toEqual([{ kind: 'global', name: LAYOUT_CONFIG_GLOBAL, value: { keepSidebarRail: true } }])
     await fiber.dispose()
     const disposed: IndexInjection[] = []
-    ;(ctx as any).emit('webserver/index-inject', disposed)
+    ctx.emit('webserver/index-inject', disposed, peer)
     expect(disposed).toEqual([])
   })
 })

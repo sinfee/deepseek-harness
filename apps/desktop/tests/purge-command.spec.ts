@@ -27,7 +27,7 @@ it('forwards the documented pnpm purge command through both package scripts to t
   await writeFile(join(directory, 'pnpm-workspace.yaml'), 'packages:\n  - apps/desktop\n')
   await writeFile(join(directory, 'apps/desktop/package.json'), JSON.stringify({ name: desktop.name, type: 'module', scripts: { 'purge:latest': desktop.scripts['purge:latest'] } }))
   await mkdir(join(directory, 'node_modules'))
-  for (const dependency of ['.bin', 'pnpm', 'tsx', 'semver']) {
+  for (const dependency of ['.bin', '.pnpm', 'pnpm', 'tsx', 'semver']) {
     await symlink(join(root, 'node_modules', dependency), join(directory, 'node_modules', dependency), 'junction')
   }
   await copyFile(join(root, 'apps/desktop/scripts/upload-target.ts'), join(scripts, 'upload-target.ts'))

@@ -944,6 +944,13 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote('rename') rename(request: SessionRenameRequest): Promise<SessionRenameValue>
 
 /**
+ * 停止并永久删除一条会话，保留独立分叉、子会话与共享附件。
+ * @param request - 要删除的会话身份。
+ * @returns 删除确认；失败时向调用方报告，已停止的任务不会自动恢复。
+ */
+@Remote('delete') async delete(request: { sessionId: SessionId }): Promise<{ deleted: boolean }>
+
+/**
  * Fork one cold-readable exact event prefix into a new Session. An omitted
  * boundary selects the latest completed-turn prefix; an open cut receives
  * synthetic fork closers.
