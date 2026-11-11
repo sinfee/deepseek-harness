@@ -806,7 +806,10 @@ function clientConfig(
     // compressor stays off: the browser worker image lowers `yield*` only as a
     // whole statement, and a compressor that folds statements into expressions
     // hides it.
-    minify: { compress: false, mangle: false },
+    // The branded release adapters use the emitted menu and settings anchors.
+    minify: ['model-selection', 'settings-general', 'settings-account'].some(
+      name => manifest.name === `@deepseek-ai/dsh-client-ui-${name}`,
+    ) ? false : { compress: false, mangle: false },
     clean: false,
     deps: {
       neverBundle: isRequested,
