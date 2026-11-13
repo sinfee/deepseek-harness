@@ -31,6 +31,13 @@ export function registerToasts(
       inject: (): ToastDisplayInjected<'exportFailed'> => ({ display: (_notice, t) => ({ text: t('export.failed'), tone: 'warning' }) }),
     }, ToastEntry<PropsRuntime<'workspace.toast', 'exportFailed'>>)
     yield ctx.slots.register({
+      name: 'workspace.toast', key: 'readingFailed', locale: 'workspace',
+      inject: (): ToastDisplayInjected<'readingFailed'> => ({
+        display: (_notice, t) => ({ text: t('toast.readingFailed'), tone: 'warning' }),
+      }),
+    }, ToastEntry<PropsRuntime<'workspace.toast', 'readingFailed'>>)
+
+    yield ctx.slots.register({
       name: 'workspace.toast', key: 'sessionIdCopied', locale: 'workspace',
       inject: (): ToastDisplayInjected<'sessionIdCopied'> => ({
         display: (_notice, t) => ({ text: t('toast.sessionIdCopied'), tone: 'success' }),
