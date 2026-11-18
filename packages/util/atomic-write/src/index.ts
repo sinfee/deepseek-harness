@@ -28,8 +28,14 @@ function isTransientWindowsRenameError(error: unknown): boolean {
   return WINDOWS_TRANSIENT_RENAME_ERRORS.has((error as NodeJS.ErrnoException | null)?.code ?? '')
 }
 
-/** Replace the target after bounded retries for transient Windows interference. */
-async function renameAtomicTemp(temp: string, filename: string): Promise<void> {
+/**
+ * Publish a fully written sibling file by renaming it over its target.
+ * Retry transient Windows interference for a bounded interval.
+ * @param temp - Complete, closed temporary file on the target filesystem.
+ * @param filename - Target to replace.
+ * @returns Resolves after the rename commits.
+ */
+export async function renameAtomicTemp(temp: string, filename: string): Promise<void> {
   let delay = WINDOWS_RENAME_RETRY_INITIAL_MS
   for (let retries = 0;; retries += 1) {
     try {
