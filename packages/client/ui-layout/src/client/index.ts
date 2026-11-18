@@ -160,11 +160,14 @@ export const inject = ['slots', 'theme', 'locale', 'shortcuts']
  * into 'root' with its child-slot declarations, the layout store seat,
  * and the shared root instance supplying commands and the panel-info source.
  * @param ctx - client root context.
- * @param config - 组合可选择保留收起后的图标侧条；省略时沿用平台行为。
+ * @param config - 直接调用可传布尔开关。客户端加载器传入同步引用时，读取宿主注入的布局选项。
  */
-export function apply(ctx: ClientContext, config?: Config): void {
+export function apply(ctx: ClientContext, config?: { keepSidebarRail?: unknown }): void {
   const page = globalThis as Partial<Record<typeof LAYOUT_CONFIG_GLOBAL, Config>>
-  const options = config ?? page[LAYOUT_CONFIG_GLOBAL] ?? {}
+  const configured = config?.keepSidebarRail
+  const keepSidebarRail = typeof configured === 'boolean'
+    ? configured
+    : page[LAYOUT_CONFIG_GLOBAL]?.keepSidebarRail === true
   ctx.effect(() => ctx.locale.register('shortcuts.layout', { zh, en, ja, es, fr, de, ru, pt }), 'layout: command labels')
   const t = ctx.locale.bind('shortcuts.layout')
 
@@ -179,7 +182,7 @@ export function apply(ctx: ClientContext, config?: Config): void {
         return () => { query?.removeEventListener('change', listener) }
       },
     }
-    const handle = createLayoutStore(options)
+    const handle = createLayoutStore({ keepSidebarRail })
     const instance = handle.create()
     const store: typeof handle = { ...handle, create: () => instance }
     const retainMainPanels = (): void => {

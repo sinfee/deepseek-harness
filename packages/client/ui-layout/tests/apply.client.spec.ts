@@ -78,13 +78,18 @@ async function bench() {
 }
 
 describe('ui-layout client apply', () => {
-  it('采用宿主页面初始化传递的侧条选项', async () => {
+  it.each([
+    { config: undefined, expected: true },
+    { config: {}, expected: true },
+    { config: { keepSidebarRail: { get: () => undefined } }, expected: true },
+    { config: { keepSidebarRail: false }, expected: false },
+  ])('按字段读取客户端配置和宿主页面的侧条选项（$config）', async ({ config, expected }) => {
     vi.stubGlobal(LAYOUT_CONFIG_GLOBAL, { keepSidebarRail: true })
     try {
       const { ctx, slots } = await bench()
-      await ctx.plugin({ inject: [...inject], apply }).await()
+      await ctx.plugin({ inject: [...inject], apply }, config).await()
       const handle = slots.entries('root')[0]!.store as ReturnType<typeof createLayoutStore>
-      expect(handle.create().getSnapshot().layoutInfo.keepSidebarRail).toBe(true)
+      expect(handle.create().getSnapshot().layoutInfo.keepSidebarRail).toBe(expected)
     } finally { vi.unstubAllGlobals() }
   })
   it('declares its service dependencies', () => {
