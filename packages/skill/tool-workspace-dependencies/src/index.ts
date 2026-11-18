@@ -1,9 +1,10 @@
 /** Model-facing query for a bundled Python, Node.js, and pnpm payload, in place or installed under the Harness home. */
 
-import { cp, lstat, mkdir, mkdtemp, readFile, readlink, rename, rm, stat, symlink } from 'node:fs/promises'
+import { cp, lstat, mkdir, mkdtemp, readFile, readlink, rm, stat, symlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { renameAtomicTemp } from '@deepseek-ai/dsh-atomic-write'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { WorkspaceDependencyError } from './error.ts'
 
@@ -279,7 +280,7 @@ export async function installPrimaryRuntime(source: string, root: string): Promi
   const previous = `${root}.previous`
   const previousExists = await exists(previous)
   const rootExists = await exists(root)
-  if (!rootExists && previousExists) await rename(previous, root)
+  if (!rootExists && previousExists) await renameAtomicTemp(previous, root)
   if (await exists(join(root, 'runtime.json')) && JSON.stringify(await readPrimaryRuntime(root)) === JSON.stringify(manifest)) {
     await primaryRuntimePythonAliases(root, manifest)
     const paths = workspaceDependencyPaths(root, manifest)
@@ -293,9 +294,9 @@ export async function installPrimaryRuntime(source: string, root: string): Promi
     await validatePayloadEntries(paths)
     await rm(previous, { recursive: true, force: true })
     const replacing = await exists(root)
-    if (replacing) await rename(root, previous)
-    try { await rename(staging, root) } catch (error) {
-      if (replacing) await rename(previous, root)
+    if (replacing) await renameAtomicTemp(root, previous)
+    try { await renameAtomicTemp(staging, root) } catch (error) {
+      if (replacing) await renameAtomicTemp(previous, root)
       throw error
     }
     await rm(previous, { recursive: true, force: true })

@@ -29,10 +29,10 @@ function isTransientWindowsRenameError(error: unknown): boolean {
 }
 
 /**
- * Publish a fully written sibling file by renaming it over its target.
+ * Publish a complete sibling file or directory by renaming it to its target.
  * Retry transient Windows interference for a bounded interval.
- * @param temp - Complete, closed temporary file on the target filesystem.
- * @param filename - Target to replace.
+ * @param temp - Complete source on the target filesystem.
+ * @param filename - Destination path.
  * @returns Resolves after the rename commits.
  */
 export async function renameAtomicTemp(temp: string, filename: string): Promise<void> {

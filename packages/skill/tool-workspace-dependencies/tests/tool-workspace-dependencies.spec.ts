@@ -423,6 +423,15 @@ it.each([false, true])('preserves the previous installation if publication fails
   expect((await fs.readdir(dirname(root))).filter(name => name.startsWith('.primary-runtime-'))).toEqual([])
 })
 
+it.runIf(process.platform === 'win32')('publishes the runtime after a temporary Windows rename failure', async () => {
+  const { source, root, manifest } = await fixture()
+  vi.mocked(fs.rename).mockRejectedValueOnce(Object.assign(new Error('temporarily busy'), { code: 'EPERM' }))
+
+  await expect(installPrimaryRuntime(source, root)).resolves.toEqual(workspaceDependencyPaths(root, manifest))
+  expect(await readPrimaryRuntime(root)).toEqual(manifest)
+  expect((await fs.readdir(dirname(root))).filter(name => name.startsWith('.primary-runtime-'))).toEqual([])
+})
+
 it('retries a failed tool preparation and renders its call presentation', async () => {
   const { source, root } = await fixture()
   const metadata = await readFile(join(source, 'runtime.json'))
