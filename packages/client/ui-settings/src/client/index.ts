@@ -14,7 +14,7 @@ import { SettingsDescribeMirror } from './settings-mirror.ts'
 
 export type {
   SettingsLauncherOwnerProps, SettingsGeneralItemOwnerProps, SettingsHeaderOwnerProps, SettingsOnboardingOwnerProps,
-  SettingsPluginsTabOwnerProps, SettingsSectionIconOwnerProps, SettingsSectionOwnerProps, SettingsTriggerOwnerProps,
+  SettingsNoticeOwnerProps, SettingsSectionIconOwnerProps, SettingsSectionOwnerProps, SettingsSectionViewProps, SettingsTriggerOwnerProps,
   SettingsNavigation,
 } from './contract/slots.ts'
 export type { ConfigForms } from './config-form.ts'
