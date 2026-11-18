@@ -44,8 +44,14 @@ export async function renameAtomicTemp(temp: string, filename: string): Promise<
     } catch (error) {
       if (!isTransientWindowsRenameError(error)) throw error
       if (retries >= WINDOWS_RENAME_RETRY_LIMIT) throw error
+      const target = await lstat(filename).catch((statError: unknown) => {
+        // The target can disappear or remain inaccessible while Windows releases it.
+        void statError
+        return undefined
+      })
+      if (target?.isDirectory()) throw error
     }
-    await new Promise(resolve => setTimeout(resolve, delay))
+    await wait(delay)
     delay = Math.min(delay * 2, WINDOWS_RENAME_RETRY_MAX_MS)
   }
 }
